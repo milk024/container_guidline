@@ -101,7 +101,20 @@
     return ok;
   }
 
-  function validateTree(roots) {
+  // 예시: { v: 장면 라벨에 보일 실제 값(짧게), code: 하단에 보일 전체 예시 }
+  function parseEx(n) {
+    if (n.ex === undefined || n.ex === null) return null;
+    if (typeof n.ex !== 'object') { warn('노드 "' + n.label + '"의 예시(ex) 형식이 올바르지 않아 무시했습니다.'); return null; }
+    var ex = {
+      v: isStr(n.ex.v) ? String(n.ex.v).replace(/\s*\n\s*/g, ' ') : '',
+      code: isStr(n.ex.code) ? String(n.ex.code).replace(/\s+$/, '') : '',
+      lang: isStr(n.ex.lang) ? n.ex.lang : ''
+    };
+    return ex.v || ex.code ? ex : null;
+  }
+
+  function validateTree(roots, exMap) {
+    exMap = exMap && typeof exMap === 'object' ? exMap : {};
     var list = Array.isArray(roots) ? roots : (roots ? [roots] : []);
     function walk(n, parentId, depth, path) {
       if (!n || typeof n !== 'object') { warn(path + ': 노드 형식이 올바르지 않아 제외했습니다.'); return null; }
@@ -115,6 +128,7 @@
         parentId: parentId, depth: depth, childIds: []
       };
       entry.data.src = checkSrc('노드 "' + n.label + '"', n.src);
+      entry.data.ex = parseEx(n.ex !== undefined ? n : { label: n.label, ex: Object.prototype.hasOwnProperty.call(exMap, n.id) ? exMap[n.id] : undefined });
       state.nodes[n.id] = entry;
       state.order.push(n.id);
       (Array.isArray(n.children) ? n.children : []).forEach(function (c, i) {
@@ -409,6 +423,7 @@
       el('span', { class: 'lbl-text' }, [
         d.en ? el('span', { class: 'lbl-en', text: d.en }) : null,
         el('span', { class: 'lbl-ko', text: d.label }),
+        d.ex && d.ex.v ? el('code', { class: 'lbl-ex', text: d.ex.v }) : null,
         kids ? el('span', { class: 'lbl-meta', text: '하위 ' + kids + ' ›' }) : null,
         opts.badge ? el('span', { class: 'lbl-badge', text: '' }) : null,
         el('span', { class: 'sel-badge', text: '선택됨' })
@@ -424,7 +439,7 @@
     var grid = forceGrid || ctx.W < GRID_BELOW;
     var layered = items.length <= 5 && items.every(function (id) { return state.nodes[id].childIds.length > 0; });
 
-    var labels = items.map(function (id, i) { return makeLabel(id, labelParts(id, { num: grid ? i + 1 : 0 })); });
+    var labels = items.map(function (id, i) { return makeLabel(id, labelParts(id, { num: i + 1 })); });
     var R, g;
     if (grid) { g = measureGrid(labels, ctx.W); R = gridRegion(ctx, g, 210); }
     else if (layered) { var cw = sideColW(ctx.W); R = { x: 28, y: 34, w: ctx.W - cw - 110, h: ctx.H - 60 }; }
@@ -694,14 +709,88 @@
     $('flow-bar').hidden = state.mode !== 'flow';
   }
 
-  function capLine(id, prefix, text) {
-    var d = state.nodes[id].data;
-    return el('p', { class: 'cap-main' }, [
-      prefix ? el('span', { class: 'cap-step', text: prefix }) : null,
-      d.en ? el('span', { class: 'cap-en', text: d.en }) : null,
-      el('strong', { class: 'cap-name', text: d.label }),
-      el('span', { class: 'cap-desc', text: ' — ' + text })
+  // 출처: 짧은 칩(전체 제목은 title 속성)
+  function srcChips(ids) {
+    var wrap = el('span', { class: 'src-chips' });
+    (ids || []).forEach(function (id) {
+      var s = state.sources[id];
+      if (!s) return;
+      wrap.appendChild(el('a', { class: 'src-chip', href: s.url, target: '_blank', rel: 'noopener noreferrer', title: s.title + ' (새 창)', text: s.title }));
+    });
+    return wrap;
+  }
+
+  // 예시 코드: marks[{v, n, key}]에 해당하는 조각을 번호와 함께 강조한다.
+  function exBlock(id, marks, heading) {
+    var ex = state.nodes[id].data.ex;
+    if (!ex || !ex.code) return null;
+    var code = ex.code, hits = [];
+    (marks || []).forEach(function (m) {
+      if (!m.v) return;
+      var from = 0, i;
+      while ((i = code.indexOf(m.v, from)) >= 0) {
+        var e = i + m.v.length;
+        if (!hits.some(function (h) { return i < h.e && e > h.s; })) { hits.push({ s: i, e: e, n: m.n, key: m.key }); break; }
+        from = i + 1;
+      }
+    });
+    hits.sort(function (x, y) { return x.s - y.s; });
+    var pre = el('pre', { class: 'ex-code', tabindex: '0', 'aria-label': heading }), pos = 0;
+    hits.forEach(function (h) {
+      if (h.s > pos) pre.appendChild(document.createTextNode(code.slice(pos, h.s)));
+      pre.appendChild(el('mark', { class: 'ex-mark', 'data-mk': h.key || '' }, [
+        h.n ? el('span', { class: 'ex-n', text: pad2(h.n) }) : null,
+        code.slice(h.s, h.e)
+      ]));
+      pos = h.e;
+    });
+    if (pos < code.length) pre.appendChild(document.createTextNode(code.slice(pos)));
+    return el('figure', { class: 'cap-ex' }, [
+      el('figcaption', { class: 'cap-ex-h' }, [
+        el('span', { text: heading }),
+        ex.lang ? el('span', { class: 'cap-ex-lang', text: ex.lang }) : null
+      ]),
+      pre
     ]);
+  }
+
+  function capHead(id, badge, extra) {
+    var d = state.nodes[id].data;
+    return el('div', { class: 'cap-head' }, [
+      badge ? el('span', { class: 'cap-step', text: badge }) : null,
+      el('div', { class: 'cap-title' }, [
+        d.en ? el('span', { class: 'cap-en', text: d.en }) : null,
+        el('strong', { class: 'cap-name', text: d.label })
+      ]),
+      extra || null
+    ]);
+  }
+
+  function capFoot(src, terms) {
+    var foot = el('div', { class: 'cap-foot' });
+    if (terms && terms.length) {
+      foot.appendChild(el('div', { class: 'cap-row' }, [el('span', { class: 'cap-k', text: '용어' }), el('span', { class: 'cap-terms' }, terms.slice(0, 4).map(function (t) {
+        return el('button', { type: 'button', class: 'term-chip', 'data-term': t.term, text: t.term });
+      }))]));
+    }
+    if (src && src.length) foot.appendChild(el('div', { class: 'cap-row' }, [el('span', { class: 'cap-k', text: '출처' }), srcChips(src)]));
+    return foot;
+  }
+
+  function capCard(info, exFig) {
+    return el('div', { class: 'cap-card' + (exFig ? ' has-ex' : '') }, [el('div', { class: 'cap-info' }, info), exFig]);
+  }
+
+  function childMarks(id, numbered) {
+    return state.nodes[id].childIds.map(function (c, i) {
+      var ex = state.nodes[c].data.ex;
+      return { v: ex && ex.v, n: numbered ? i + 1 : 0, key: c };
+    });
+  }
+
+  function selfMarks(id) {
+    var ex = state.nodes[id].data.ex;
+    return ex && ex.v ? [{ v: ex.v, n: 0, key: id }] : [];
   }
 
   function updateCaption() {
@@ -711,37 +800,38 @@
       var f = currentFlow();
       if (!f) { box.appendChild(el('p', { class: 'cap-hint', text: '표시할 흐름 데이터가 없습니다.' })); return; }
       var s = f.steps[state.step];
-      box.appendChild(capLine(s.node, 'STEP ' + (state.step + 1) + '/' + f.steps.length, s.text));
-      var m = el('p', { class: 'cap-meta' }, [
-        el('span', { text: f.title + (f.desc ? ' — ' + f.desc : '') }),
-        el('span', { class: 'cap-src' }, ['출처: ', srcLinks(f.src)]),
-        el('button', { type: 'button', class: 'ghost-btn sm', 'data-go': s.node, text: '구조에서 보기 ›' })
-      ]);
-      box.appendChild(m);
+      box.appendChild(capCard([
+        capHead(s.node, 'STEP ' + (state.step + 1) + '/' + f.steps.length,
+          el('button', { type: 'button', class: 'ghost-btn sm', 'data-go': s.node, text: '구조에서 보기 ›' })),
+        el('p', { class: 'cap-desc', text: s.text }),
+        el('p', { class: 'cap-flow' }, [el('span', { class: 'cap-k', text: '흐름' }), f.title + (f.desc ? ' — ' + f.desc : '')]),
+        capFoot(f.src)
+      ], exBlock(s.node, selfMarks(s.node), '이 단계의 예시')));
       return;
     }
     var id = state.hotId && state.nodes[state.hotId] ? state.hotId : state.selId;
     if (!id || !state.nodes[id]) {
       var v = state.viewId;
-      if (v) box.appendChild(el('p', { class: 'cap-context' }, [el('span', { class: 'cap-en', text: enOf(v) }), ' ', el('strong', { text: state.nodes[v].data.label }), ' — ' + state.nodes[v].data.desc]));
-      else if (isStr(state.meta.subtitle)) box.appendChild(el('p', { class: 'cap-context', text: state.meta.subtitle }));
-      box.appendChild(el('p', { class: 'cap-hint', text: HINT }));
-      box.appendChild(el('p', { class: 'cap-sub', text: '터치: 한 번 눌러 설명 · 다시 눌러 들어가기 · 키보드: Tab 이동, Enter 들어가기, Esc 상위로' }));
+      var info = [];
+      if (v) {
+        info.push(capHead(v, '', null));
+        info.push(el('p', { class: 'cap-desc', text: state.nodes[v].data.desc }));
+      } else if (isStr(state.meta.subtitle)) info.push(el('p', { class: 'cap-desc', text: state.meta.subtitle }));
+      info.push(el('p', { class: 'cap-hint', text: HINT }));
+      info.push(el('p', { class: 'cap-sub', text: '터치: 한 번 눌러 설명 · 다시 눌러 들어가기 · 키보드: Tab 이동, Enter 들어가기, Esc 상위로' }));
+      box.appendChild(capCard(info, v ? exBlock(v, childMarks(v, true), '예시 — 번호는 장면의 블록') : null));
       return;
     }
     var n = state.nodes[id];
-    box.appendChild(capLine(id, '', n.data.desc));
-    var meta = el('p', { class: 'cap-meta' });
-    if (id === state.selId) meta.appendChild(el('span', { class: 'cap-badge', text: '● 선택됨' }));
-    if (n.childIds.length) meta.appendChild(el('button', { type: 'button', class: 'ghost-btn sm is-primary', 'data-drill': id, text: '들어가기 › (하위 ' + n.childIds.length + ')' }));
-    meta.appendChild(el('span', { class: 'cap-src' }, ['출처: ', srcLinks(n.data.src)]));
-    var rt = relatedTerms(id);
-    if (rt.length) {
-      meta.appendChild(el('span', { class: 'cap-terms' }, ['용어: '].concat(rt.slice(0, 4).map(function (t) {
-        return el('button', { type: 'button', class: 'term-chip', 'data-term': t.term, text: t.term });
-      }))));
-    }
-    box.appendChild(meta);
+    var acts = el('span', { class: 'cap-acts' }, [
+      id === state.selId ? el('span', { class: 'cap-badge', text: '● 선택됨' }) : null,
+      n.childIds.length ? el('button', { type: 'button', class: 'ghost-btn sm is-primary', 'data-drill': id, text: '들어가기 › (하위 ' + n.childIds.length + ')' }) : null
+    ]);
+    box.appendChild(capCard([
+      capHead(id, '', acts),
+      el('p', { class: 'cap-desc', text: n.data.desc }),
+      capFoot(n.data.src, relatedTerms(id))
+    ], exBlock(id, n.childIds.length ? childMarks(id, false) : selfMarks(id), '예시')));
   }
 
   /* ---------------- 이동 ---------------- */
@@ -1120,7 +1210,10 @@
     }
     safe('헤더', function () { renderHeader(data.meta); });
     state.sources = safe('출처 검증', function () { return validateSources(data.sources); }) || {};
-    safe('구조 검증', function () { validateTree(data.tree); });
+    safe('구조 검증', function () {
+      validateTree(data.tree, data.examples);
+      Object.keys(data.examples || {}).forEach(function (k) { if (!state.nodes[k]) warn('예시(examples)의 "' + k + '"에 해당하는 노드가 없습니다.'); });
+    });
     safe('흐름 검증', function () { validateFlows(data.flows); });
     safe('용어 검증', function () { validateTerms(data.terms); });
 
