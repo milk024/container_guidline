@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>인프라 학습 가이드</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#stage-labels">장면 탐색으로 건너뛰기</a>
+
+  <header class="topbar">
+    <div class="tb-main">
+      <div class="tb-left">
+        <button type="button" class="ghost-btn back-btn" id="back-btn" hidden>‹ <span id="back-text">상위</span></button>
+      </div>
+      <div class="tb-center">
+        <nav class="crumbs" id="crumbs" aria-label="현재 위치"></nav>
+        <h1 class="guide-title" id="guide-title">불러오는 중…</h1>
+      </div>
+      <div class="tb-actions" role="toolbar" aria-label="보기 전환">
+        <button type="button" class="ghost-btn" id="open-outline" aria-haspopup="dialog">☰ 구조</button>
+        <button type="button" class="ghost-btn" id="toggle-flow" aria-pressed="false">⇢ 흐름</button>
+        <button type="button" class="ghost-btn" id="open-terms" aria-haspopup="dialog">Aa 용어</button>
+        <button type="button" class="ghost-btn" id="open-sources" aria-haspopup="dialog">§ 출처</button>
+      </div>
+    </div>
+    <nav class="guide-nav" id="guide-nav" aria-label="다른 학습 페이지"></nav>
+  </header>
+
+  <details class="notice" id="data-notice" hidden>
+    <summary id="notice-summary">데이터 경고</summary>
+    <ul id="notice-list"></ul>
+  </details>
+
+  <main class="stage" id="stage" aria-label="구조 탐색 장면">
+    <svg class="scene" id="scene" aria-hidden="true" focusable="false"></svg>
+    <div class="stage-labels" id="stage-labels" tabindex="-1" role="group" aria-label="탐색할 영역"></div>
+  </main>
+
+  <footer class="caption" id="caption">
+    <div class="flow-bar" id="flow-bar" role="group" aria-label="흐름 단계 이동" hidden>
+      <label class="flow-select-wrap" id="flow-select-wrap" hidden>
+        <span class="sr-only">흐름 선택</span>
+        <select id="flow-select"></select>
+      </label>
+      <span class="step-counter" id="step-counter"></span>
+      <button type="button" class="ghost-btn" id="step-prev">◀ 이전</button>
+      <button type="button" class="ghost-btn is-primary" id="step-play" aria-pressed="false">▶ 자동 재생</button>
+      <button type="button" class="ghost-btn" id="step-next">다음 ▶</button>
+      <button type="button" class="ghost-btn" id="step-reset">↺ 처음</button>
+    </div>
+    <div class="caption-body" id="caption-body" aria-live="polite"></div>
+  </footer>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-head">
+      <h2 class="drawer-title" id="drawer-title"></h2>
+      <button type="button" class="ghost-btn" id="drawer-close">닫기 ✕</button>
+    </div>
+
+    <section class="pane" data-pane="outline" hidden>
+      <p class="pane-note">항목을 누르면 장면에서 해당 위치로 이동합니다.</p>
+      <div class="pane-tools">
+        <button type="button" class="ghost-btn" id="expand-all">전체 펼치기</button>
+        <button type="button" class="ghost-btn" id="collapse-all">전체 접기</button>
+      </div>
+      <ul class="outline" id="outline"></ul>
+    </section>
+
+    <section class="pane" data-pane="terms" hidden>
+      <p class="pane-note">형식 — <strong>용어</strong>: 요약 / <strong>vs 비교대상</strong>: 차이 1줄</p>
+      <input type="search" class="term-search" id="term-search" placeholder="용어 검색" aria-label="용어 검색">
+      <dl class="term-list" id="term-list"></dl>
+      <p class="pane-note" id="term-empty" hidden>검색 결과가 없습니다.</p>
+    </section>
+
+    <section class="pane" data-pane="sources" hidden>
+      <ol class="source-list" id="source-list"></ol>
+      <div id="internal-refs"></div>
+      <p class="pane-note" id="checked-note"></p>
+    </section>
+
+  </aside>
+
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
