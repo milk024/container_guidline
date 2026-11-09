@@ -13,7 +13,8 @@
     { id: 'docker', label: 'Docker', en: 'DOCKER', href: '../docker_guideline/index.html' },
     { id: 'k8s', label: 'Kubernetes', en: 'KUBERNETES', href: '../k8s_guideline/index.html' },
     { id: 'cicd', label: 'CI/CD', en: 'CI/CD', href: '../ci_cd_guideline/index.html' },
-    { id: 'monitoring', label: '모니터링', en: 'MONITORING', href: '../monitoring_guideline/index.html' }
+    { id: 'monitoring', label: '모니터링', en: 'MONITORING', href: '../monitoring_guideline/index.html' },
+    { id: 'gitflow', label: 'Git Flow·커밋', en: 'GIT FLOW', href: '../git_flow_commit_guideline/index.html' }
   ];
   var AUTOPLAY_MS = 2400;
   var GRID_BELOW = 760;          // 이 너비 미만이면 라벨을 장면 아래 번호 목록으로 배치
@@ -808,8 +809,10 @@
     var f = currentFlow();
     if (!f) return;
     state.step = Math.max(0, Math.min(f.steps.length - 1, i));
+    var st = $('stage'), h0 = st.clientHeight;
     applyFlowState();
     updateCaption();
+    if (st.clientHeight !== h0) render(); // 설명 줄 수가 바뀌어 무대 높이가 달라지면 바로 다시 배치(라벨이 잠깐 무대 밖에 걸치는 것 방지)
   }
 
   function startAutoplay() {

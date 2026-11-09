@@ -137,6 +137,20 @@ window.GUIDE_DATA = {
         { node: 'helmupgrade', text: 'helm upgrade로 새 Tag를 클러스터에 직접 반영합니다.' },
         { node: 'rollout', text: 'Deployment가 Rolling update를 수행합니다.' }
       ]
+    },
+    {
+      id: 'helm', title: 'Helm Chart 배포·롤백 흐름', src: ['git', 'helm-lint', 'helm-using', 'helm-values', 'harbor-robot', 'pull-secret', 'helm-upgrade', 'rolling', 'helm-rollback'],
+      desc: 'Chart를 검사해 private Registry 이미지로 배포하고, 문제가 생기면 이전 Revision으로 되돌리는 순서입니다.',
+      steps: [
+        { node: 'repo', text: 'Chart와 환경별 values 파일을 Git 저장소에서 함께 관리합니다.' },
+        { node: 'helmlint', text: 'helm lint로 Chart 문법과 권장 형식을 먼저 검사합니다.' },
+        { node: 'chart', text: 'values.yaml의 image.tag 등에 이번 배포 값을 넣어 템플릿을 채웁니다.' },
+        { node: 'robot', text: 'private Registry 접근에는 사람 계정 대신 Robot account 자격 증명을 씁니다.' },
+        { node: 'pullsecret', text: '그 자격 증명으로 imagePullSecret을 만들어 Pod가 이미지를 받을 수 있게 합니다.' },
+        { node: 'helmupgrade', text: 'helm upgrade --install 로 새 Revision을 클러스터에 적용합니다.' },
+        { node: 'rollout', text: 'Deployment가 Rolling update로 Pod를 차례로 교체합니다.' },
+        { node: 'rollback', text: '문제가 생기면 helm rollback <release> <revision> 으로 이전 Revision을 다시 적용합니다.' }
+      ]
     }
   ],
 

@@ -157,6 +157,32 @@ window.GUIDE_DATA = {
         { node: 'pod', text: 'CNI가 연결한 Pod IP로 요청이 도착합니다.' },
         { node: 'container', text: '컨테이너의 애플리케이션이 요청을 처리하고 응답합니다.' }
       ]
+    },
+    {
+      id: 'workload', title: '운영용 Pod 설정 흐름 (권한·설정·저장소·자원)', src: ['ns', 'rbac', 'cm', 'secret', 'pv', 'sc', 'resources', 'probes'],
+      desc: '애플리케이션을 실제 운영에 올릴 때 Pod 주변에 붙이는 설정을 순서대로 봅니다.',
+      steps: [
+        { node: 'namespace', text: 'Namespace를 만들어 팀·환경별로 객체 이름과 권한 범위를 나눕니다.' },
+        { node: 'rbac', text: 'Role·RoleBinding으로 그 Namespace에서 누가 무엇을 할 수 있는지 정합니다.' },
+        { node: 'config', text: '일반 설정은 ConfigMap, 비밀번호 같은 값은 Secret으로 분리해 Pod에 주입합니다.' },
+        { node: 'pvc', text: 'PVC로 저장소를 요청하면 StorageClass가 PV를 만들어 연결합니다.' },
+        { node: 'resources', text: '컨테이너마다 CPU·메모리 requests와 limits를 적습니다.' },
+        { node: 'scheduler', text: 'Scheduler는 requests를 수용할 여유가 있는 Node에만 Pod를 배치합니다.' },
+        { node: 'probe', text: 'kubelet이 liveness·readiness Probe로 컨테이너 상태를 주기적으로 검사합니다.' },
+        { node: 'pod', text: 'readiness를 통과한 Pod만 Service 트래픽을 받습니다.' }
+      ]
+    },
+    {
+      id: 'bootstrap', title: 'Control Plane 기동 흐름 (kubeadm)', src: ['kubeadm', 'static', 'components', 'controller'],
+      desc: 'kubeadm으로 만든 클러스터에서 Control Plane 구성 요소가 뜨는 방식입니다.',
+      steps: [
+        { node: 'kubelet', text: 'kubeadm init 후 kubelet이 /etc/kubernetes/manifests 디렉터리를 감시합니다.' },
+        { node: 'staticpod', text: '그 디렉터리의 YAML은 API Server 없이 kubelet이 직접 Static Pod로 실행합니다.' },
+        { node: 'etcd', text: 'etcd가 Static Pod로 떠서 클러스터 상태 저장소가 준비됩니다.' },
+        { node: 'apiserver', text: 'kube-apiserver Static Pod가 etcd에 연결해 API를 엽니다.' },
+        { node: 'scheduler', text: 'kube-scheduler가 API Server를 지켜보며 Node가 없는 Pod를 배치합니다.' },
+        { node: 'ctrlmgr', text: 'kube-controller-manager가 컨트롤 루프로 현재 상태를 원하는 상태에 맞춥니다.' }
+      ]
     }
   ],
 

@@ -142,6 +142,18 @@ window.GUIDE_DATA = {
         { node: 'logql', text: 'LogQL로 라벨을 고른 뒤 내용으로 걸러냅니다.' },
         { node: 'grafana', text: 'Grafana에서 로그를 메트릭 그래프와 함께 봅니다.' }
       ]
+    },
+    {
+      id: 'k8smetrics', title: 'Kubernetes·애플리케이션·GPU 메트릭 흐름', src: ['clientlibs', 'ksm', 'dcgm', 'operator', 'k8s-metrics'],
+      desc: 'node-exporter 외의 수집 대상과, Prometheus와 별개로 동작하는 metrics-server를 함께 봅니다.',
+      steps: [
+        { node: 'appmetrics', text: '애플리케이션은 client library로 요청 수·지연 시간을 /metrics에 노출합니다.' },
+        { node: 'ksm', text: 'kube-state-metrics는 Deployment·Pod 같은 API 객체의 상태를 메트릭으로 바꿉니다.' },
+        { node: 'dcgm', text: 'DCGM Exporter는 GPU 사용률·메모리·온도를 노출합니다.' },
+        { node: 'servicemonitor', text: '각 Exporter의 Service를 ServiceMonitor로 수집 대상에 등록합니다.' },
+        { node: 'scrape', text: 'Prometheus가 모두 같은 방식으로 Pull 해 TSDB에 저장합니다.' },
+        { node: 'metricsserver', text: '한편 metrics-server는 kubelet의 CPU·메모리 값만 모아 kubectl top·HPA에 제공하며 이력은 저장하지 않습니다.' }
+      ]
     }
   ],
 

@@ -151,6 +151,43 @@ window.GUIDE_DATA = {
         { node: 'tag', text: 'app:1.0 Tag가 붙고 내용 기반 Digest가 계산됩니다.' },
         { node: 'repository', text: 'docker push로 Registry의 Repository에 업로드합니다.' }
       ]
+    },
+    {
+      id: 'isolate', title: '컨테이너 격리·자원 제한 흐름', src: ['run', 'ns', 'cgroup', 'restart'],
+      desc: 'docker run 옵션이 커널 기능으로 이어져 컨테이너를 격리·제한·재시작하는 순서입니다.',
+      steps: [
+        { node: 'cli', text: 'docker run --memory 512m --cpus 1 --restart unless-stopped 로 실행을 요청합니다.' },
+        { node: 'containers', text: 'Daemon이 이미지로 컨테이너를 만들고 프로세스를 시작합니다.' },
+        { node: 'namespaces', text: 'Namespaces가 PID·네트워크·마운트를 분리해 호스트의 다른 프로세스를 보지 못하게 합니다.' },
+        { node: 'cgroups', text: 'cgroups가 --memory·--cpus 값만큼만 자원을 쓰게 제한합니다.' },
+        { node: 'restart', text: '프로세스가 종료되면 Restart policy에 따라 Daemon이 다시 시작합니다.' }
+      ]
+    },
+    {
+      id: 'connect', title: '네트워크·저장소 연결 흐름', src: ['network', 'drivers', 'ports', 'storage', 'volumes', 'bind', 'tmpfs'],
+      desc: '컨테이너를 네트워크에 붙이고 데이터를 어디에 둘지 고르는 순서입니다.',
+      steps: [
+        { node: 'bridge', text: '기본은 bridge 네트워크라 같은 호스트의 컨테이너끼리만 통신합니다.' },
+        { node: 'ports', text: '외부에서 접속하려면 -p 8080:80 으로 호스트 포트를 컨테이너 포트에 연결합니다.' },
+        { node: 'host', text: '--network host 를 쓰면 격리 없이 호스트 네트워크를 그대로 씁니다.' },
+        { node: 'overlay', text: '여러 호스트(Swarm)에 걸친 통신은 overlay 네트워크로 연결합니다.' },
+        { node: 'volume', text: '보존할 데이터는 -v data:/var/lib/data 처럼 Docker가 관리하는 Volume에 둡니다.' },
+        { node: 'bindmount', text: '개발 중 소스 코드처럼 호스트 경로를 그대로 보여줄 때는 Bind mount를 씁니다.' },
+        { node: 'tmpfs', text: '남기면 안 되는 임시 데이터는 메모리에만 두는 tmpfs에 씁니다.' }
+      ]
+    },
+    {
+      id: 'compose', title: 'Compose로 여러 컨테이너 실행 흐름', src: ['compose', 'hub', 'pull', 'network', 'volumes'],
+      desc: 'compose.yaml 하나로 웹·DB 같은 여러 서비스를 함께 띄우는 순서입니다.',
+      steps: [
+        { node: 'compose', text: 'compose.yaml에 services·networks·volumes를 정의합니다.' },
+        { node: 'cli', text: 'docker compose up -d 로 정의 전체를 실행합니다.' },
+        { node: 'hub', text: '로컬에 없는 이미지(postgres 등)는 Docker Hub에서 받아옵니다.' },
+        { node: 'images', text: '받은 이미지와 build: 로 만든 이미지가 준비됩니다.' },
+        { node: 'networks', text: '프로젝트용 네트워크가 만들어져 서비스 이름으로 서로를 찾습니다.' },
+        { node: 'volumes', text: '정의한 named volume이 생성되어 DB 데이터가 보존됩니다.' },
+        { node: 'containers', text: '서비스마다 컨테이너가 시작됩니다.' }
+      ]
     }
   ],
 
