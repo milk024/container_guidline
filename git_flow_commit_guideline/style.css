@@ -67,9 +67,27 @@ button { font: inherit; color: inherit; }
   padding: 14px 24px; min-height: 64px;
   background: linear-gradient(#000 60%, rgba(0, 0, 0, 0));
 }
-.back { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); text-decoration: none; font-size: 13px; padding: 6px 10px 6px 4px; border-radius: 999px; }
-.back svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
-.back:hover { color: var(--text); }
+.back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--text); text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 6px 14px 6px 8px; border: 1px solid hsl(var(--h) 95% 75% / .45); border-radius: 999px; background: hsl(var(--h) 90% 70% / .08); transition: background .2s, border-color .2s, transform .2s var(--ease); }
+.back svg { width: 18px; height: 18px; fill: none; stroke: var(--lav); stroke-width: 2.2; transition: transform .2s var(--ease); }
+.back:hover { border-color: var(--lav); background: hsl(var(--h) 90% 70% / .16); }
+.back:hover svg { transform: translateX(-3px); }
+
+/* 장면 위에 떠 있는 '상위로' 버튼(안으로 들어갔을 때만) */
+.stage-up { position: absolute; left: 16px; top: 8px; z-index: 6; display: inline-flex; align-items: center; gap: 8px; min-height: 42px; padding: 8px 12px 8px 10px; border: 1.5px solid hsl(var(--h) 95% 75% / .85); border-radius: 14px; background: hsl(var(--h) 45% 16% / .92); backdrop-filter: blur(6px); color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer; box-shadow: 0 0 0 0 hsl(var(--h) 90% 70% / .4), 0 8px 24px rgba(0, 0, 0, .5); animation: upIn .5s var(--ease) both, upGlow 2.4s ease-out .5s 2; transition: border-color .2s, background .2s; }
+.stage-up svg { width: 18px; height: 18px; fill: none; stroke: var(--lav); stroke-width: 2.2; transition: transform .2s var(--ease); }
+.stage-up .su-t { color: var(--text); font-size: 12.5px; font-weight: 600; }
+.stage-up b { color: var(--lav); font-weight: 700; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stage-up kbd { margin-left: 2px; padding: 1px 6px; border: 1px solid hsl(var(--h) 95% 75% / .5); border-radius: 6px; color: var(--text); font: 600 10px var(--mono); }
+.stage-up:hover { border-color: var(--lav); background: hsl(var(--h) 50% 22% / .95); }
+.stage-up:hover svg { transform: translateX(-3px); }
+@keyframes upIn { from { opacity: 0; transform: translateX(-16px); } }
+@keyframes upGlow { 0% { box-shadow: 0 0 0 0 hsl(var(--h) 90% 70% / .5), 0 8px 24px rgba(0, 0, 0, .5); } 100% { box-shadow: 0 0 0 12px hsl(var(--h) 90% 70% / 0), 0 8px 24px rgba(0, 0, 0, .5); } }
+
+/* 페이지 들어오기·나가기 */
+body { animation: pageIn .5s var(--ease) both; }
+@keyframes pageIn { from { opacity: 0; } }
+html.is-leaving body { opacity: 0; transition: opacity .25s ease; }
+html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transition: transform .25s ease, filter .25s ease; }
 .crumb { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; font-size: 11px; letter-spacing: .14em; color: var(--muted); }
 .crumb i { font-style: normal; opacity: .4; }
 .crumb b { color: var(--lav); font-weight: 700; }
@@ -85,7 +103,7 @@ button { font: inherit; color: inherit; }
 .pill:hover { border-color: var(--lav-3); color: var(--text); }
 .pill:disabled { opacity: .35; cursor: default; }
 .pill.is-primary { background: var(--lav); color: #000; border-color: var(--lav); font-weight: 700; }
-#motion-btn[aria-pressed="true"] { border-color: var(--lav-3); color: var(--lav); }
+#motion-btn.is-off { border-color: var(--lav-3); color: var(--lav); }
 
 /* ---------------- 레이아웃 ---------------- */
 .layout { position: relative; z-index: 1; display: block; }
@@ -93,8 +111,11 @@ button { font: inherit; color: inherit; }
   position: relative; display: flex; flex-direction: column; align-items: center;
   padding: 8px 16px 24px; outline: none;
 }
-.board-wrap { position: relative; margin: 0 auto; transition: opacity .26s var(--ease), transform .26s var(--ease); }
-.hw-stage.is-diving .board-wrap { opacity: 0; transform: scale(.96); }
+.board-wrap { position: relative; margin: 0 auto; will-change: transform, opacity; }
+.hw-stage.is-diving .board-wrap { pointer-events: none; }
+.hw-stage:not(.is-root) { padding-top: 62px; }
+.part.is-came > .bx .ft, .part.is-came .ft { animation: cameGlow 1.4s ease-out; }
+@keyframes cameGlow { 0%, 40% { fill: var(--lav-3); } 100% { } }
 .board { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .labels { position: absolute; inset: 0; pointer-events: none; }
 .leaders { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
@@ -220,6 +241,10 @@ button { font: inherit; color: inherit; }
 @keyframes scan { 0% { top: 0; opacity: 0; } 20% { opacity: 1; } 100% { top: calc(100% - 80px); opacity: 0; } }
 
 .tours.is-view .tours__list { display: none; }
+.tours.is-view .tours__view { animation: paneFwd .45s var(--ease) both; }
+.tours:not(.is-view) .tours__list { animation: paneBack .45s var(--ease) both; }
+@keyframes paneFwd { from { opacity: 0; transform: translateX(28px); } }
+@keyframes paneBack { from { opacity: 0; transform: translateX(-28px); } }
 .tours:not(.is-view) .tours__view { display: none; }
 .tours__eyebrow { margin: 0 0 8px; font: 600 11px/1.4 var(--mono); letter-spacing: .26em; color: var(--lav); text-transform: uppercase; }
 .tours__title { margin: 0 0 10px; font-size: 26px; line-height: 1.25; font-weight: 800; letter-spacing: -.01em; }
@@ -253,8 +278,8 @@ button { font: inherit; color: inherit; }
 .ti-meta svg, .tv-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
 
 /* 단계 화면 */
-.tours__back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 14px; padding: 6px 10px 6px 6px; border: 0; border-radius: 999px; background: none; color: var(--muted); font-size: 12.5px; cursor: pointer; }
-.tours__back:hover { color: var(--text); background: rgba(255, 255, 255, .05); }
+.tours__back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; margin: 0 0 14px; padding: 6px 14px 6px 8px; border: 1px solid hsl(var(--h) 95% 75% / .45); border-radius: 999px; background: hsl(var(--h) 90% 70% / .08); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; transition: background .2s, border-color .2s; }
+.tours__back:hover { border-color: var(--lav); background: hsl(var(--h) 90% 70% / .16); }
 .tours__back svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
 .tv-where { display: flex; align-items: center; gap: 8px; }
 .tv-where::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--lav); box-shadow: 0 0 0 0 var(--lav); animation: pulse 1.8s ease-out infinite; }
@@ -323,6 +348,10 @@ button { font: inherit; color: inherit; }
 /* ---------------- 설명창 ---------------- */
 .modal-back { position: fixed; inset: 0; z-index: 60; background: rgba(0, 0, 0, .72); backdrop-filter: blur(4px); animation: fadeIn .3s var(--ease); }
 @keyframes fadeIn { from { opacity: 0; } }
+.modal-back.is-closing { animation: fadeOut .2s ease forwards; }
+.modal.is-closing { animation: modalOut .2s ease forwards; }
+@keyframes fadeOut { to { opacity: 0; } }
+@keyframes modalOut { to { opacity: 0; transform: translate(-50%, -47%) scale(.97); } }
 .modal {
   position: fixed; z-index: 61; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(1040px, calc(100vw - 48px)); height: min(640px, calc(100vh - 48px));

@@ -19,13 +19,14 @@
       <button type="button" class="pill" id="open-outline" aria-haspopup="dialog">구조</button>
       <button type="button" class="pill" id="open-terms" aria-haspopup="dialog">용어</button>
       <button type="button" class="pill" id="open-sources" aria-haspopup="dialog">출처</button>
-      <button type="button" class="pill" id="motion-btn" aria-pressed="false" title="장면 움직임 줄이기">움직임 줄이기</button>
+      <button type="button" class="pill" id="motion-btn">애니메이션 끄기</button>
     </div>
   </header>
   <h1 class="sr-only" id="page-title">인프라 학습 가이드</h1>
 
   <div class="layout">
     <main class="hw-stage" id="stage" tabindex="-1" aria-label="구조 장면">
+      <button type="button" class="stage-up" id="stage-up" hidden aria-keyshortcuts="Escape Backspace"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span class="su-t">상위로</span><b id="stage-up-to"></b><kbd aria-hidden="true">Esc</kbd></button>
       <div class="board-wrap" id="board-wrap">
         <svg class="board" id="board" aria-hidden="true" focusable="false"></svg>
         <div class="labels" id="labels" role="group" aria-label="장면의 구성 요소"></div>

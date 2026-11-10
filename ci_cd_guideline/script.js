@@ -934,26 +934,95 @@
     openModal(id, 0, opener);
   }
 
-  /* ---------------- 이동(들어가기·나오기) ---------------- */
+  /* ---------------- 이동(들어가기·나오기) ----------------
+     들어갈 때: 누른 부분을 중심으로 확대되며 사라지고, 새 판이 작게서 커지며 나타난다.
+     나올 때: 지금 판이 작아지며 사라지고, 위 판이 방금 나온 부분을 중심으로 크게서 제자리로 돌아온다.
+     옆(형제)으로 갈 때: 옆으로 밀려나고 반대쪽에서 들어온다. 움직임 줄이기면 바로 바뀐다. */
+  var EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
+  function anim(node, frames, ms, delay) {
+    if (motionOff() || !node || !node.animate) return null;
+    try { return node.animate(frames, { duration: ms, delay: delay || 0, easing: EASE, fill: 'both' }); } catch (e) { return null; }
+  }
+  function endAnim(a) { if (a) try { a.cancel(); } catch (e) { /* 무시 */ } }
+  // 부분(노드)의 화면 중심을 board-wrap 기준 px로
+  function partOrigin(id) {
+    var K = state.kit, g = K && K.parts[id], wrap = $('board-wrap');
+    if (!g) return '50% 50%';
+    var r = g.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    if (!r.width) return '50% 50%';
+    return Math.round(r.left + r.width / 2 - w.left) + 'px ' + Math.round(r.top + r.height / 2 - w.top) + 'px';
+  }
+  // 새 화면의 부분·라벨이 차례로 떠오르게
+  function popParts() {
+    if (motionOff()) return;
+    var K = state.kit, i = 0;
+    Object.keys(K.parts).forEach(function (id) {
+      var a = anim(K.parts[id], [{ opacity: 0, transform: 'translateY(-14px)' }, { opacity: 1, transform: 'none' }], 520, 80 + i * 55);
+      if (a) a.onfinish = function () { endAnim(a); };
+      i++;
+    });
+    each('#labels .lbl', function (b, k) {
+      var a = anim(b, [{ opacity: 0 }, { opacity: 1 }], 360, 260 + k * 45);
+      if (a) a.onfinish = function () { endAnim(a); };
+    });
+  }
   function setView(id, focusId) {
     if (id && !state.nodes[id]) id = null;
     if (id && !state.nodes[id].childIds.length) id = state.nodes[id].parentId;
     if (id === state.viewId) { updateTop(); return; }
-    var stage = $('stage'), prev = state.viewId;
+    var stage = $('stage'), wrap = $('board-wrap'), prev = state.viewId;
+    var pNew = id ? pathTo(id) : [], pOld = prev ? pathTo(prev) : [];
+    var dir = (prev === null || pNew.indexOf(prev) >= 0) && pNew.length > pOld.length ? 'in'
+      : (id === null || pOld.indexOf(id) >= 0) ? 'out' : 'side';
+    // 들어갈 때 기준이 되는 부분: 새 경로에서 지금 화면 바로 아래 단계
+    var inPart = dir === 'in' ? pNew[pOld.length] : null;
+    // 나올 때 새 화면에서 기준이 되는 부분: 옛 경로에서 새 화면 바로 아래 단계
+    var outPart = dir === 'out' ? pOld[pNew.length] : null;
     stage.classList.add('is-diving');
     hideTip();
+    var exitFrames;
+    if (dir === 'in') {
+      wrap.style.transformOrigin = partOrigin(inPart);
+      exitFrames = [{ opacity: 1, transform: 'scale(1)', filter: 'blur(0)' }, { opacity: 0, transform: 'scale(1.9)', filter: 'blur(6px)' }];
+    } else if (dir === 'out') {
+      wrap.style.transformOrigin = '50% 50%';
+      exitFrames = [{ opacity: 1, transform: 'scale(1)', filter: 'blur(0)' }, { opacity: 0, transform: 'scale(.55)', filter: 'blur(4px)' }];
+    } else {
+      wrap.style.transformOrigin = '50% 50%';
+      exitFrames = [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-60px)' }];
+    }
+    var ex = anim(wrap, exitFrames, 340);
     later(function () {
       state.viewId = id;
       state.hotId = null;
       renderView();
       updateOutline();
       saveHash();
+      endAnim(ex);
+      var enterFrames;
+      if (dir === 'in') {
+        wrap.style.transformOrigin = '50% 50%';
+        enterFrames = [{ opacity: 0, transform: 'scale(.6)', filter: 'blur(4px)' }, { opacity: 1, transform: 'scale(1)', filter: 'blur(0)' }];
+      } else if (dir === 'out') {
+        wrap.style.transformOrigin = partOrigin(outPart);
+        enterFrames = [{ opacity: 0, transform: 'scale(1.9)', filter: 'blur(6px)' }, { opacity: 1, transform: 'scale(1)', filter: 'blur(0)' }];
+      } else {
+        enterFrames = [{ opacity: 0, transform: 'translateX(60px)' }, { opacity: 1, transform: 'none' }];
+      }
+      var en = anim(wrap, enterFrames, 520);
+      if (en) en.onfinish = function () { endAnim(en); wrap.style.transformOrigin = ''; };
+      if (dir === 'in') popParts();
       stage.classList.remove('is-diving');
+      if (outPart && state.kit.parts[outPart] && !motionOff()) {
+        // 방금 나온 부분을 잠깐 빛내 위치를 알려 준다
+        state.kit.parts[outPart].classList.add('is-came');
+        setTimeout(function () { if (state.kit.parts[outPart]) state.kit.parts[outPart].classList.remove('is-came'); }, 1400);
+      }
       var f = focusId || prev;
       var lb = f && document.querySelector('#labels .lbl[data-id="' + f + '"]:not([aria-hidden])');
       if (lb && document.activeElement && document.activeElement !== document.body) lb.focus();
       updateHint();
-    }, 260);
+    }, 330);
   }
   function up() { if (state.viewId) setView(state.nodes[state.viewId].parentId, state.viewId); }
 
@@ -973,7 +1042,10 @@
       back.setAttribute('href', '#' + (pid || ''));
       back.setAttribute('data-up', '1');
       $('back-text').textContent = pid ? nd(pid).label : (state.guide ? state.guide.label : '처음');
+      $('stage-up').hidden = false;
+      $('stage-up-to').textContent = pid ? nd(pid).label : (state.guide ? state.guide.label : '처음 화면');
     } else {
+      $('stage-up').hidden = true;
       back.setAttribute('href', HUB);
       back.removeAttribute('data-up');
       $('back-text').textContent = '전체 지도';
@@ -1273,6 +1345,8 @@
     if (!state.nodes[id]) return;
     hideTip();
     var wasOpen = !!state.modal;
+    clearTimeout(state.modalTimer);
+    $('modal').classList.remove('is-closing'); $('modal-back').classList.remove('is-closing');
     state.modal = { id: id, slide: slide || 0, slides: slidesOf(id), opener: wasOpen ? state.modal.opener : (opener || document.activeElement) };
     var d = nd(id), m = $('modal');
     $('md-eyebrow').textContent = enOf(id) + ' · L' + Math.min(3, state.nodes[id].depth);
@@ -1308,9 +1382,17 @@
     var op = state.modal.opener;
     state.modal = null;
     hideTip();
-    $('modal').hidden = true;
-    $('modal-back').hidden = true;
     document.body.classList.remove('modal-open');
+    var hideIt = function () {
+      if (state.modal) return;
+      $('modal').hidden = true; $('modal-back').hidden = true;
+      $('modal').classList.remove('is-closing'); $('modal-back').classList.remove('is-closing');
+    };
+    if (motionOff()) hideIt();
+    else {
+      $('modal').classList.add('is-closing'); $('modal-back').classList.add('is-closing');
+      state.modalTimer = setTimeout(hideIt, 200);
+    }
     if (op && op.focus && document.body.contains(op)) op.focus();
   }
 
@@ -1555,7 +1637,10 @@
   function setMotion(reduce, save) {
     reduced = reduce;
     document.documentElement.classList.toggle('kb-reduce', reduce);
-    $('motion-btn').setAttribute('aria-pressed', reduce ? 'true' : 'false');
+    var mb = $('motion-btn');
+    mb.textContent = reduce ? '애니메이션 켜기' : '애니메이션 끄기';
+    mb.title = reduce ? '지금은 장면 움직임이 꺼져 있습니다' : '장면 움직임을 줄입니다';
+    mb.classList.toggle('is-off', reduce);
     if (save) store('kb-motion', reduce ? 'reduce' : 'full');
   }
 
@@ -1582,6 +1667,17 @@
       box.addEventListener('focusout', function () { setHot(null); });
     });
     // 위쪽
+    $('stage-up').addEventListener('click', up);
+    // 다른 페이지(전체 지도·다른 가이드)로 갈 때 화면을 흐리게 지운 뒤 이동
+    document.addEventListener('click', function (e) {
+      var a = e.target.closest && e.target.closest('a[href]');
+      if (!a || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || a.target) return;
+      var h = a.getAttribute('href');
+      if (!h || h.charAt(0) === '#' || /^[a-z]+:/i.test(h)) return;
+      e.preventDefault();
+      leavePage(a.href);
+    });
+    window.addEventListener('pageshow', function () { document.documentElement.classList.remove('is-leaving'); });
     $('back').addEventListener('click', function (e) { if (this.hasAttribute('data-up')) { e.preventDefault(); up(); } });
     $('crumb').addEventListener('click', function (e) {
       var b = e.target.closest('button[data-view]');
@@ -1660,6 +1756,7 @@
       }
       if (!$('drawer').hidden) { trapFocus(e, $('drawer')); return; }
       if (typingField) return;
+      if (e.key === 'Backspace' && state.viewId && state.flow < 0) { e.preventDefault(); up(); return; }
       if (state.flow >= 0 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
         e.preventDefault();
         goStep(state.step + (e.key === 'ArrowRight' ? 1 : -1));
@@ -1712,11 +1809,18 @@
     var h = decodeURIComponent((location.hash || '').slice(1));
     state.viewId = state.nodes[h] && state.nodes[h].childIds.length ? h : null;
     safe('장면', renderView);
+    safe('장면 등장', popParts);
     safe('실습 창', buildPractice);
     updateHint();
     renderWarnings();
     setTimeout(showTourTip, 1400);
     window.__guide = { state: state, setView: setView, openFlow: openFlow, openModal: openModal, warnings: warnings };
+  }
+
+  function leavePage(url) {
+    if (motionOff()) { location.href = url; return; }
+    document.documentElement.classList.add('is-leaving');
+    setTimeout(function () { location.href = url; }, 260);
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
