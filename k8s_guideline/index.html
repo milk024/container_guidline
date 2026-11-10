@@ -24,6 +24,7 @@
         <button type="button" class="ghost-btn" id="toggle-flow" aria-pressed="false">⇢ 흐름</button>
         <button type="button" class="ghost-btn" id="open-terms" aria-haspopup="dialog">Aa 용어</button>
         <button type="button" class="ghost-btn" id="open-sources" aria-haspopup="dialog">§ 출처</button>
+        <button type="button" class="ghost-btn" id="tour-btn" aria-haspopup="dialog">? 둘러보기</button>
       </div>
     </div>
     <nav class="guide-nav" id="guide-nav" aria-label="다른 학습 페이지"></nav>
@@ -33,6 +34,26 @@
     <summary id="notice-summary">데이터 경고</summary>
     <ul id="notice-list"></ul>
   </details>
+
+  <section class="hero" id="hero" aria-labelledby="hero-key">
+    <div class="hero-main">
+      <p class="hero-eyebrow" id="hero-eyebrow"></p>
+      <p class="hero-key" id="hero-key"></p>
+      <button type="button" class="ghost-btn sm hero-toggle" id="hero-toggle" aria-controls="hero-body" aria-expanded="true" hidden>소개 펼치기 ▾</button>
+    </div>
+    <div class="hero-body" id="hero-body">
+      <div class="hero-learn" id="hero-learn-wrap">
+        <h2 class="hero-h">이 페이지에서 알 수 있는 것</h2>
+        <ul id="hero-learn"></ul>
+      </div>
+      <div class="hero-side">
+        <button type="button" class="ghost-btn is-primary hero-start" id="hero-start">여기서 시작 ▸</button>
+        <nav class="relation" aria-label="네 페이지의 관계">
+          <ol id="relation"></ol>
+        </nav>
+      </div>
+    </div>
+  </section>
 
   <main class="stage" id="stage" aria-label="구조 탐색 장면">
     <svg class="scene" id="scene" aria-hidden="true" focusable="false"></svg>
@@ -74,6 +95,8 @@
       <p class="pane-note">형식 — <strong>용어</strong>: 요약 / <strong>vs 비교대상</strong>: 차이 1줄</p>
       <input type="search" class="term-search" id="term-search" placeholder="용어 검색" aria-label="용어 검색">
       <dl class="term-list" id="term-list"></dl>
+      <button type="button" class="ghost-btn term-more" id="term-more" aria-controls="term-list-more" aria-expanded="false" hidden>더 보기</button>
+      <dl class="term-list" id="term-list-more" hidden></dl>
       <p class="pane-note" id="term-empty" hidden>검색 결과가 없습니다.</p>
     </section>
 
@@ -84,6 +107,20 @@
     </section>
 
   </aside>
+
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+
+  <div class="tour" id="tour" role="dialog" aria-modal="false" aria-labelledby="tour-title" aria-describedby="tour-text" hidden>
+    <p class="tour-count" id="tour-count"></p>
+    <h2 class="tour-title" id="tour-title"></h2>
+    <p class="tour-text" id="tour-text"></p>
+    <div class="tour-btns">
+      <button type="button" class="ghost-btn sm" id="tour-skip">건너뛰기</button>
+      <span class="tour-gap"></span>
+      <button type="button" class="ghost-btn sm" id="tour-prev">‹ 이전</button>
+      <button type="button" class="ghost-btn sm is-primary" id="tour-next">다음 ›</button>
+    </div>
+  </div>
 
   <script src="data.js"></script>
   <script src="logos.js"></script>

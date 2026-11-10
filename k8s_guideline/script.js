@@ -1,9 +1,10 @@
 /* ==========================================================================
    공통 렌더링 엔진 — 4개 학습 페이지가 동일한 파일을 사용합니다.
    내용(구조·흐름·용어·출처)은 같은 폴더의 data.js(window.GUIDE_DATA)에만 있습니다.
-   - 아이소메트릭(등각) 장면: 상위 영역은 분해된 레이어, 하위 영역·흐름 단계는 보드 위 심볼(육각 배지+아이콘)로 그립니다.
-   - 장면이 바뀌면 이전 장면이 흐려지며 새 장면이 나타나고(크로스페이드), 선택이 바뀌면 설명이 페이드 인됩니다.
-   - 영역에 포인터를 올리면 떠오르며 빛나고, 누르면 그 안으로 들어갑니다.
+   - 점진적 공개: 첫 화면은 L1(핵심 구성요소 3~5개)과 기본 흐름만, 노드를 열 때마다 L2 → L3로 한 단계씩 내려갑니다.
+   - 아이소메트릭(등각) 보드 위에 심볼(육각 배지+아이콘)로 그리고, L1은 기본 흐름 순서대로 화살표로 잇습니다.
+   - 한 번 누르면 선택(핵심·역할 표시), 선택된 것을 한 번 더 누르면 그 안으로 들어갑니다. 포인터를 올리면 강조만 됩니다.
+   - 본문 속 용어는 툴팁(요약 1줄 + 비교 1개)으로, 첫 방문에는 3~5단계 둘러보기(건너뛰기 가능)를 보여 줍니다.
    - 데이터 일부가 잘못되어도 해당 항목만 건너뛰고 경고를 표시하며, 나머지는 동작합니다.
    - 외부 라이브러리 없이 순수 JavaScript(ES5)로 작성해 file://에서도 그대로 동작합니다.
    ========================================================================== */
@@ -21,7 +22,7 @@
   var GRID_BELOW = 760;          // 이 너비 미만이면 라벨을 장면 아래 번호 목록으로 배치
   var NS = 'http://www.w3.org/2000/svg';
   var C30 = Math.cos(Math.PI / 6), S30 = 0.5;
-  var HINT = '탐색할 영역에 포인터를 올려보세요';
+  var HINT = '블록을 한 번 누르면 설명, 선택된 블록을 한 번 더 누르면 안으로 들어갑니다';
 
   var warnings = [];
   var state = {
@@ -32,7 +33,9 @@
     hotId: null,         // 포인터·포커스가 올라간 항목 key
     selId: null,         // 고정 선택된 노드 id
     flowIndex: 0, step: 0, timer: null,
-    lastPointer: 'mouse', drawerOpener: null, keyNav: false
+    lastPointer: 'mouse', drawerOpener: null, keyNav: false,
+    moreOpen: false,     // "자세히 보기" 펼침 상태(선택이 바뀌어도 유지)
+    termsMore: false     // 용어 서랍의 L2·L3 펼침 상태
   };
 
   /* ---------------- 유틸 ---------------- */
@@ -67,6 +70,12 @@
   function warn(msg) { warnings.push(msg); }
   function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return Math.abs(h); }
   function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  // localStorage는 사생활 보호 모드·file:// 등에서 막힐 수 있으므로 항상 try/catch로 감싼다.
+  function store(k, v) {
+    try { if (v === undefined) return window.localStorage.getItem(k); window.localStorage.setItem(k, v); } catch (e) { /* 저장 불가 환경: 무시 */ }
+    return null;
+  }
+  function lvOf(id) { return state.nodes[id] ? Math.min(3, state.nodes[id].depth) : 3; }
 
   function safe(label, fn) {
     try { return fn(); }
@@ -125,7 +134,11 @@
       if (!desc) { warn('노드 "' + n.label + '"에 설명이 없습니다.'); desc = '(설명 준비 중)'; }
       else if (/\n/.test(desc)) { warn('노드 "' + n.label + '"의 설명이 1줄이 아닙니다.'); desc = desc.replace(/\s*\n\s*/g, ' '); }
       var entry = {
-        data: { id: n.id, label: n.label, en: isStr(n.en) ? n.en : '', desc: desc, terms: Array.isArray(n.terms) ? n.terms.filter(isStr) : [] },
+        data: {
+          id: n.id, label: n.label, en: isStr(n.en) ? n.en : '', desc: desc, terms: Array.isArray(n.terms) ? n.terms.filter(isStr) : [],
+          // key: 무엇이고 왜 필요한지 1줄, role: 흐름에서 "OO에게 받아서 OO에게 넘긴다". 없으면 설명으로 대신한다.
+          key: isStr(n.key) ? n.key.trim() : '', role: isStr(n.role) ? n.role.trim() : ''
+        },
         parentId: parentId, depth: depth, childIds: []
       };
       entry.data.src = checkSrc('노드 "' + n.label + '"', n.src);
@@ -153,7 +166,9 @@
         steps.push({ node: s.node, text: isStr(s.text) ? s.text : state.nodes[s.node].data.desc });
       });
       if (steps.length < 2) { warn('흐름 "' + f.title + '"는 유효한 단계가 2개 미만이라 제외했습니다.'); return; }
-      state.flows.push({ id: f.id || 'flow' + fi, title: f.title, desc: isStr(f.desc) ? f.desc : '', steps: steps, src: checkSrc('흐름 "' + f.title + '"', f.src) });
+      var at = isStr(f.at) ? f.at : null;
+      if (at && !state.nodes[at]) { warn('흐름 "' + f.title + '": at 노드 "' + at + '"가 없어 항상 표시합니다.'); at = null; }
+      state.flows.push({ id: f.id || 'flow' + fi, title: f.title, desc: isStr(f.desc) ? f.desc : '', steps: steps, main: f.main === true, at: at, src: checkSrc('흐름 "' + f.title + '"', f.src) });
     });
   }
 
@@ -166,10 +181,14 @@
       var key = norm(t.term);
       if (seen[key]) { warn('중복 용어 "' + t.term + '"는 제외했습니다.'); return; }
       seen[key] = true;
+      var nodes = Array.isArray(t.nodes) ? t.nodes.filter(function (id) { return !!state.nodes[id]; }) : [];
+      // level: 1이면 기본 표시, 2·3은 "더 보기". 생략하면 연결된 노드 중 가장 얕은 깊이(없으면 3).
+      var level = t.level === 1 || t.level === 2 || t.level === 3 ? t.level
+        : nodes.length ? Math.min.apply(null, nodes.map(lvOf)) : 3;
       state.terms.push({
         id: 'term-' + state.terms.length,
         term: t.term, summary: t.summary, vs: { term: t.vs.term, diff: t.vs.diff },
-        nodes: Array.isArray(t.nodes) ? t.nodes.filter(function (id) { return !!state.nodes[id]; }) : [],
+        nodes: nodes, level: level,
         src: checkSrc('용어 "' + t.term + '"', t.src)
       });
     });
@@ -200,6 +219,86 @@
   function pathTo(id) { var p = []; while (id) { p.unshift(id); id = state.nodes[id].parentId; } return p; }
   function enOf(id) { var d = state.nodes[id].data; return (d.en || d.label).toUpperCase(); }
   function currentFlow() { return state.flows[state.flowIndex] || null; }
+  function mainFlowIndex() {
+    for (var i = 0; i < state.flows.length; i++) if (state.flows[i].main) return i;
+    return 0;
+  }
+  // 지금 보이는 흐름: 기본 흐름(main) + at이 없는 흐름 + 지금 펼친 노드 경로에 걸린 상세 흐름
+  function visibleFlows() {
+    var path = (state.viewId ? pathTo(state.viewId) : []).concat(state.selId && state.nodes[state.selId] ? pathTo(state.selId) : []);
+    var out = [];
+    state.flows.forEach(function (f, i) { if (f.main || !f.at || path.indexOf(f.at) >= 0) out.push(i); });
+    return out;
+  }
+  // L1 장면에서 블록을 화살표로 이을지: 기본 흐름 순서가 최상위 순서와 같을 때만
+  function chainRoots() {
+    var f = state.flows[mainFlowIndex()];
+    if (!f || !f.main || f.steps.length !== state.rootIds.length) return false;
+    return f.steps.every(function (s, i) { return s.node === state.rootIds[i]; });
+  }
+
+  /* ---------------- 용어 툴팁 ----------------
+     본문 문자열에서 용어가 처음 나오는 곳을 버튼(.tt)으로 감싼다. 같은 설명 안에서는 용어마다 한 번만. */
+  var termMatchers = null;
+  function buildMatchers() {
+    termMatchers = state.terms.map(function (t) {
+      var latin = /^[\x00-\x7f]+$/.test(t.term);
+      return { t: t, low: t.term.toLowerCase(), latin: latin };
+    }).sort(function (a, b) { return b.low.length - a.low.length; });
+  }
+  function richText(text, used, self) {
+    var frag = document.createDocumentFragment();
+    text = String(text || '');
+    if (!termMatchers) buildMatchers();
+    var low = text.toLowerCase(), hits = [];
+    used = used || {};
+    termMatchers.forEach(function (m) {
+      if (used[m.t.id] || (self && self.indexOf(norm(m.t.term)) >= 0)) return;
+      var from = 0, i;
+      while ((i = low.indexOf(m.low, from)) >= 0) {
+        var e = i + m.low.length;
+        var okB = !m.latin || ((i === 0 || !/[a-z0-9]/i.test(text.charAt(i - 1))) && (e >= text.length || !/[a-z0-9]/i.test(text.charAt(e))));
+        if (okB && !hits.some(function (h) { return i < h.e && e > h.s; })) { hits.push({ s: i, e: e, t: m.t }); used[m.t.id] = true; break; }
+        from = i + 1;
+      }
+    });
+    hits.sort(function (a, b) { return a.s - b.s; });
+    var pos = 0;
+    hits.forEach(function (h) {
+      if (h.s > pos) frag.appendChild(document.createTextNode(text.slice(pos, h.s)));
+      frag.appendChild(el('button', { type: 'button', class: 'tt', 'data-tip': h.t.id, 'aria-expanded': 'false', text: text.slice(h.s, h.e) }));
+      pos = h.e;
+    });
+    if (pos < text.length) frag.appendChild(document.createTextNode(text.slice(pos)));
+    return frag;
+  }
+  function selfKeys(id) { var d = state.nodes[id].data; return [norm(d.label), norm(d.en)].filter(Boolean); }
+  function termById(tid) { for (var i = 0; i < state.terms.length; i++) if (state.terms[i].id === tid) return state.terms[i]; return null; }
+
+  var tipOwner = null;
+  function showTip(btn) {
+    var t = termById(btn.getAttribute('data-tip')), tip = $('tip');
+    if (!t || !tip) return;
+    if (tipOwner && tipOwner !== btn) tipOwner.setAttribute('aria-expanded', 'false');
+    tipOwner = btn;
+    tip.textContent = '';
+    tip.appendChild(el('p', { class: 'tip-main' }, [el('strong', { text: t.term }), ': ' + t.summary]));
+    tip.appendChild(el('p', { class: 'tip-vs' }, [el('strong', { text: 'vs ' + t.vs.term }), ': ' + t.vs.diff]));
+    tip.hidden = false;
+    btn.setAttribute('aria-expanded', 'true');
+    btn.setAttribute('aria-describedby', 'tip');
+    var r = btn.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    tip.style.maxWidth = Math.min(340, vw - 24) + 'px';
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = Math.max(12, Math.min(vw - 12 - w, r.left + r.width / 2 - w / 2));
+    var y = r.top - h - 8 >= 8 ? r.top - h - 8 : Math.min(vh - h - 8, r.bottom + 8);
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hideTip() {
+    if (tipOwner) { tipOwner.setAttribute('aria-expanded', 'false'); tipOwner.removeAttribute('aria-describedby'); }
+    tipOwner = null;
+    if ($('tip')) $('tip').hidden = true;
+  }
 
   /* ---------------- 등각 투영 ---------------- */
   // 월드 좌표(x, y: 바닥면, z: 높이) → 화면 좌표. 화면 오른쪽 아래가 +x, 왼쪽 아래가 +y.
@@ -239,15 +338,6 @@
     poly(g, [I(x, y + d, z), I(x + w, y + d, z), I(x + w, y + d, z + h), I(x, y + d, z + h)], c + 'f-left');
     poly(g, [I(x + w, y, z), I(x + w, y + d, z), I(x + w, y + d, z + h), I(x + w, y, z + h)], c + 'f-right');
     poly(g, [I(x, y, z + h), I(x + w, y, z + h), I(x + w, y + d, z + h), I(x, y + d, z + h)], c + 'f-top');
-  }
-
-  function marker(g, P, b, num) {
-    var p = P.I(b.x + b.w / 2, b.y + b.d / 2, b.z + b.h);
-    var r = Math.max(8, Math.min(12, P.s * 0.9));
-    g.appendChild(svg('circle', { cx: p[0], cy: p[1] - r - 2, r: r, class: 'num-bg' }));
-    var t = svg('text', { x: p[0], y: p[1] - r - 2, class: 'num-tx', 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': Math.round(r * 1.05) });
-    t.textContent = String(num);
-    g.appendChild(t);
   }
 
   function defs() {
@@ -541,7 +631,11 @@
         d.en ? el('span', { class: 'lbl-en', text: d.en }) : null,
         el('span', { class: 'lbl-ko', text: d.label }),
         d.ex && d.ex.v ? el('code', { class: 'lbl-ex', text: d.ex.v }) : null,
-        kids ? el('span', { class: 'lbl-meta', text: '하위 ' + kids + ' ›' }) : null,
+        // 레벨과 하위 유무를 함께 보여 준다(하위가 있으면 한 단계 더 들어갈 수 있음)
+        el('span', { class: 'lbl-meta' }, [
+          el('span', { class: 'lv lv-' + lvOf(id), text: 'L' + lvOf(id) }),
+          el('span', { class: kids ? 'lbl-kids' : 'lbl-leafmark', text: kids ? '하위 ' + kids + '개 ▸' : '끝' })
+        ]),
         opts.badge ? el('span', { class: 'lbl-badge', text: '' }) : null,
         el('span', { class: 'sel-badge', text: '선택됨' })
       ])
@@ -554,19 +648,18 @@
     var items = itemsOf(state.viewId);
     if (!items.length) { sizeSvg(ctx); $('stage-labels').appendChild(el('p', { class: 'stage-empty', text: '표시할 구조 데이터가 없습니다.' })); return; }
     var grid = forceGrid || ctx.W < GRID_BELOW;
-    var layered = items.length <= 5 && items.every(function (id) { return state.nodes[id].childIds.length > 0; });
+    var chain = state.viewId === null && chainRoots();
 
     var labels = items.map(function (id, i) { return makeLabel(id, labelParts(id, { num: i + 1 })); });
     var R, g;
     if (grid) { g = measureGrid(labels, ctx.W); R = gridRegion(ctx, g, 210); }
-    else if (layered) { var cw = sideColW(ctx.W); R = { x: 28, y: 34, w: ctx.W - cw - 110, h: ctx.H - 60 }; }
     else { var cw2 = sideColW(ctx.W); R = { x: cw2 + 58, y: 34, w: ctx.W - (cw2 + 58) * 2, h: ctx.H - 60 }; }
     sizeSvg(ctx);
 
-    var model = layered ? layerModel(items) : boardModel(items);
+    var model = boardModel(items, chain);
     var all = [];
     model.boxes.forEach(function (b) { all = all.concat(boxCorners(b)); });
-    var P = fit(all, R, layered ? 15 : 13);
+    var P = fit(all, R, 13);
 
     var base = svg('g', { class: 'scene-base' }), blocks = svg('g', { class: 'scene-blocks' }), lines = svg('g', { class: 'scene-lines' });
     ctx.sv.appendChild(base); ctx.sv.appendChild(lines); ctx.sv.appendChild(blocks);
@@ -574,78 +667,20 @@
     entries.forEach(function (e, i) { e.el = labels[i]; });
 
     if (!grid) {
-      if (!layoutSide(entries, P.box, ctx.W, ctx.H, layered)) { renderExplore(true); return; }
+      if (!layoutSide(entries, P.box, ctx.W, ctx.H, false)) { renderExplore(true); return; }
       drawLeaders(lines, entries);
     }
     applyClasses();
   }
 
-  // 상위 영역: 분해도처럼 위아래로 띄운 레이어(첫 항목이 맨 위).
-  function layerModel(items) {
-    var SW = 24, SD = 15, ST = 1.4, GAP = 10.5, n = items.length;
-    var boxes = items.map(function (id, i) { return { x: 0, y: 0, z: (n - 1 - i) * GAP, w: SW, d: SD, h: ST, id: id }; });
-    return {
-      boxes: boxes,
-      draw: function (base, layer, P, grid) {
-        var I = P.I;
-        // 레이어 사이 수직 안내선(분해도 느낌)
-        for (var i = 0; i < n - 1; i++) {
-          [[0, SD], [SW, SD], [SW, 0]].forEach(function (c) {
-            var a = I(c[0], c[1], boxes[i + 1].z + ST), b = I(c[0], c[1], boxes[i].z);
-            base.appendChild(svg('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: 'guide' }));
-          });
-        }
-        var entries = [];
-        for (var j = n - 1; j >= 0; j--) {
-          var b = boxes[j], id = b.id;
-          var g = svg('g', { class: 'blk layer', 'data-key': id });
-          var lift = svg('g', { class: 'lift' });
-          g.appendChild(lift);
-          drawBox(lift, P, b);
-          // 윗면 테두리 안쪽 선
-          var t = b.z + ST, m = 1;
-          poly(lift, [I(m, m, t), I(SW - m, m, t), I(SW - m, SD - m, t), I(m, SD - m, t)], 'motif');
-          // 하위 항목 미리보기 부품
-          var kids = state.nodes[id].childIds, k = Math.min(kids.length, 8);
-          var cols = Math.min(4, k), rows = Math.ceil(k / cols);
-          var cwid = (SW - 6) / cols, cdep = (SD - 5) / rows, fp = Math.min(cwid, cdep) * 0.58;
-          var minis = [];
-          for (var q = 0; q < k; q++) {
-            var c = q % cols, r = Math.floor(q / cols);
-            minis.push({ x: 3 + c * cwid + (cwid - fp) / 2, y: 2.5 + r * cdep + (cdep - fp) / 2, z: t, w: fp, d: fp, h: state.nodes[kids[q]].childIds.length ? 1.6 : 0.9, kid: kids[q] });
-          }
-          minis.sort(function (a, b2) { return (a.x + a.y) - (b2.x + b2.y); });
-          minis.forEach(function (mb) {
-            var foot = I(mb.x + mb.w / 2, mb.y + mb.d / 2, t), mr = Math.max(7, Math.min(20, fp * P.s * 0.62));
-            lift.appendChild(svg('ellipse', { cx: foot[0], cy: foot[1], rx: mr * 0.9, ry: mr * 0.3, class: 'tok-shadow' }));
-            var my = foot[1] - mr * 1.05;
-            if (state.nodes[mb.kid].childIds.length) poly(lift, hexPts(foot[0] + mr * 0.16, my - mr * 0.16, mr), 'm-hx-back');
-            var mn = iconOf(mb.kid);
-            poly(lift, hexPts(foot[0], my, mr), logoOf(mn) ? 'm-hx m-hx-logo' : 'm-hx');
-            if (mr >= 9) drawIcon(lift, mn, foot[0], my, mr * 1.05, 'm-ico');
-          });
-          // 레이어 자신의 심볼(앞쪽 모서리 엠블럼)
-          var em = I(0, SD, b.z + ST * 0.5), er = Math.max(11, Math.min(20, P.s * 1.25));
-          var en = iconOf(id);
-          poly(lift, hexPts(em[0], em[1], er), logoOf(en) ? 'hx hx-logo' : 'hx');
-          drawIcon(lift, en, em[0], em[1], er * 1.05, 'ico');
-          if (grid) marker(lift, P, { x: 0, y: 0, z: b.z, w: SW, d: SD, h: ST }, j + 1);
-          layer.appendChild(g);
-          var a = I(SW, 0, b.z + ST);
-          entries[j] = { key: id, ax: a[0], ay: a[1] };
-        }
-        return entries;
-      }
-    };
-  }
-
-  // 하위 영역: 보드 위에 부품 블록을 격자로 배치.
-  function boardModel(items) {
+  // 보드 위에 부품 블록을 격자로 배치. chain이면 뱀 모양 순서(짝수 줄은 거꾸로)로 놓고 화살표로 잇는다.
+  function boardModel(items, chain) {
     var n = items.length, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols);
     var CELL = 10, PAD = 2.5, BT = 1.2;
     var board = { x: 0, y: 0, z: 0, w: cols * CELL + PAD * 2, d: rows * CELL + PAD * 2, h: BT };
     var blocks = items.map(function (id, i) {
       var r = Math.floor(i / cols), inRow = Math.min(cols, n - r * cols), c = i % cols;
+      if (chain && r % 2) c = inRow - 1 - c;
       var off = (cols - inRow) * CELL / 2;
       var kids = state.nodes[id].childIds.length, fp = 6;
       return { x: PAD + off + c * CELL + (CELL - fp) / 2, y: PAD + r * CELL + (CELL - fp) / 2, z: BT, w: fp, d: fp, h: 7.5, id: id, kids: kids, idx: i };
@@ -674,6 +709,15 @@
           poly(bg, [I(b.x, b.y, BT), I(b.x + b.w, b.y, BT), I(b.x + b.w, b.y + b.d, BT), I(b.x, b.y + b.d, BT)], 'socket');
           b.foot = c0;
         });
+        if (chain) {
+          for (var q = 0; q < blocks.length - 1; q++) {
+            var A = blocks[q], B = blocks[q + 1];
+            var ax = A.x + A.w / 2, ay = A.y + A.d / 2, bx = B.x + B.w / 2, by = B.y + B.d / 2;
+            var dx = bx - ax, dy = by - ay, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len, cut = A.w / 2 + 0.7;
+            var p1 = I(ax + ux * cut, ay + uy * cut, BT), p2 = I(bx - ux * cut, by - uy * cut, BT);
+            bg.appendChild(svg('path', { d: 'M' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + 'L' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1), class: 'conn chain', 'marker-end': 'url(#arr-on)' }));
+          }
+        }
         blocks.slice().sort(function (p, q) { return (p.x + p.y) - (q.x + q.y); }).forEach(function (b) {
           tops[b.id] = symbolToken(layer, b.foot[0], b.foot[1], r, b.id, { kids: b.kids, num: grid ? b.idx + 1 : 0 }).top;
         });
@@ -847,22 +891,24 @@
   function setHot(key) {
     if (state.hotId === key) return;
     state.hotId = key;
-    applyClasses();
-    updateCaption();
+    applyClasses();   // 포인터·포커스는 강조만 한다(설명은 선택했을 때만 바뀐다)
   }
 
+  function crumbName(id) { var d = state.nodes[id].data; return d.en || d.label; }
+
+  // 위치 표시: "페이지 › 상위 영역들 › 선택한 항목". 앞 항목을 누르면 그 단계로 돌아간다.
   function updateTop() {
     var crumbs = $('crumbs');
     crumbs.textContent = '';
-    var trail = [{ text: 'INFRA KNOWLEDGE BASE' }];
-    var base = baseView();
-    trail.push({ text: state.guide ? state.guide.en : 'GUIDE', view: base, go: true });
-    if (state.mode === 'flow') trail.push({ text: 'FLOW' });
-    else if (state.viewId) pathTo(state.viewId).forEach(function (id) { if (id !== base) trail.push({ text: enOf(id), view: id, go: true }); });
+    var base = baseView(), trail = [];
+    trail.push({ text: state.guide ? state.guide.label : (state.meta.title || '가이드'), view: base });
+    if (state.viewId) pathTo(state.viewId).forEach(function (id) { if (id !== base) trail.push({ text: crumbName(id), view: id }); });
+    if (state.mode === 'flow') { var f = currentFlow(); trail.push({ text: '흐름: ' + (f ? f.title : '') }); }
+    else if (state.selId && state.nodes[state.selId]) trail.push({ text: crumbName(state.selId) });
     trail.forEach(function (t, i) {
-      if (i) crumbs.appendChild(el('span', { class: 'crumb-sep', 'aria-hidden': 'true', text: '/' }));
+      if (i) crumbs.appendChild(el('span', { class: 'crumb-sep', 'aria-hidden': 'true', text: '›' }));
       var last = i === trail.length - 1;
-      if (t.go && !last) crumbs.appendChild(el('button', { type: 'button', class: 'crumb', 'data-view': t.view === null ? '' : t.view, text: t.text }));
+      if (!last && t.view !== undefined) crumbs.appendChild(el('button', { type: 'button', class: 'crumb', 'data-view': t.view === null ? '' : t.view, title: '이 단계로 돌아가기', text: t.text }));
       else crumbs.appendChild(el('span', { class: 'crumb' + (last ? ' is-current' : ''), 'aria-current': last ? 'location' : null, text: t.text }));
     });
     var back = $('back-btn');
@@ -870,12 +916,13 @@
     else if (state.viewId !== base) {
       back.hidden = false;
       var p = state.nodes[state.viewId].parentId;
-      $('back-text').textContent = (p === base || p === null) ? '메인' : state.nodes[p].data.label;
+      $('back-text').textContent = (p === base || p === null) ? '처음(L1)' : state.nodes[p].data.label;
     } else back.hidden = true;
     var tf = $('toggle-flow');
     tf.setAttribute('aria-pressed', state.mode === 'flow' ? 'true' : 'false');
     tf.textContent = state.mode === 'flow' ? '◇ 탐색으로' : '⇢ 흐름';
     $('flow-bar').hidden = state.mode !== 'flow';
+    if (state.mode === 'flow') syncFlowSelect();
   }
 
   // 출처: 짧은 칩(전체 제목은 title 속성)
@@ -923,15 +970,63 @@
     ]);
   }
 
+  function lvBadge(id) { return el('span', { class: 'lv lv-' + lvOf(id), title: '레벨 ' + lvOf(id), text: 'L' + lvOf(id) }); }
+
   function capHead(id, badge, extra) {
     var d = state.nodes[id].data;
     return el('div', { class: 'cap-head' }, [
-      badge ? el('span', { class: 'cap-step', text: badge }) : null,
+      badge ? el('span', { class: 'cap-step', text: badge }) : lvBadge(id),
       el('div', { class: 'cap-title' }, [
         d.en ? el('span', { class: 'cap-en', text: d.en }) : null,
         el('strong', { class: 'cap-name', text: d.label })
       ]),
       extra || null
+    ]);
+  }
+
+  // ① 핵심(무엇·왜) ② 흐름 속 역할(OO에게 받아서 OO에게 넘긴다)
+  function keyRole(id, used) {
+    var d = state.nodes[id].data, self = selfKeys(id), out = [];
+    out.push(el('p', { class: 'cap-key' }, [richText(d.key || d.desc, used, self)]));
+    if (d.role) out.push(el('p', { class: 'cap-role' }, [el('span', { class: 'cap-k', text: '흐름 속 역할' }), richText(d.role, used, self)]));
+    return out;
+  }
+
+  // ③ 접힌 "자세히 보기": 설명·예시·관련 흐름·용어·출처·다음 단계 버튼
+  function moreBox(id, used, inside) {
+    var n = state.nodes[id], d = n.data, self = selfKeys(id), info = [];
+    if (d.key) info.push(el('p', { class: 'cap-desc' }, [richText(d.desc, used, self)]));
+    var fl = [];
+    state.flows.forEach(function (f, i) {
+      if (f.at === id || (f.main && n.parentId === null && f.steps.some(function (s) { return s.node === id; }))) fl.push(i);
+    });
+    if (fl.length) info.push(el('div', { class: 'cap-row' }, [el('span', { class: 'cap-k', text: '흐름' })].concat(fl.map(function (i) {
+      return el('button', { type: 'button', class: 'ghost-btn sm', 'data-flow': i, text: '⇢ ' + state.flows[i].title + ' (' + state.flows[i].steps.length + '단계)' });
+    }))));
+    info.push(capFoot(d.src, relatedTerms(id)));
+    if (!inside && n.childIds.length) {
+      info.push(el('p', { class: 'cap-next' }, [el('button', { type: 'button', class: 'ghost-btn sm is-primary', 'data-drill': id, text: '다음 단계로 › ' + d.label + ' 안의 L' + Math.min(3, n.depth + 1) + ' ' + n.childIds.length + '개 보기' })]));
+    }
+    var ex = exBlock(id, n.childIds.length ? childMarks(id, inside) : selfMarks(id), inside ? '예시 — 번호는 장면의 블록' : '예시');
+    return el('details', { class: 'cap-more', open: state.moreOpen }, [
+      el('summary', { text: '자세히 보기' }),
+      el('div', { class: 'cap-card' + (ex ? ' has-ex' : '') }, [el('div', { class: 'cap-info' }, info), ex])
+    ]);
+  }
+
+  // L1에서 아무것도 선택하지 않았을 때: 기본 흐름(최대 5단계, 한 줄씩)
+  function mainFlowBox() {
+    var f = state.flows[mainFlowIndex()];
+    if (!f || !f.main) return null;
+    var used = {};
+    return el('div', { class: 'cap-main' }, [
+      el('p', { class: 'cap-main-h' }, [el('span', { class: 'cap-k', text: '기본 흐름' }), f.title]),
+      el('ol', { class: 'main-steps' }, f.steps.slice(0, 5).map(function (s, i) {
+        return el('li', null, [
+          el('button', { type: 'button', class: 'ms-node', 'data-sel': s.node }, [el('span', { class: 'ms-n', 'aria-hidden': 'true', text: String(i + 1) }), state.nodes[s.node].data.label]),
+          el('span', { class: 'ms-text' }, [richText(s.text, used)])
+        ]);
+      }))
     ]);
   }
 
@@ -963,6 +1058,7 @@
   }
 
   function updateCaption() {
+    hideTip();
     var box = $('caption-body');
     var ck = state.mode + '|' + state.viewId + '|' + state.selId + '|' + state.flowIndex + '|' + (state.mode === 'flow' ? state.step : '');
     if (lastCap !== null && ck !== lastCap) enter(box, 'cap-in');
@@ -975,35 +1071,39 @@
       box.appendChild(capCard([
         capHead(s.node, 'STEP ' + (state.step + 1) + '/' + f.steps.length,
           el('button', { type: 'button', class: 'ghost-btn sm', 'data-go': s.node, text: '구조에서 보기 ›' })),
-        el('p', { class: 'cap-desc', text: s.text }),
+        el('p', { class: 'cap-desc' }, [richText(s.text, {}, selfKeys(s.node))]),
         el('p', { class: 'cap-flow' }, [el('span', { class: 'cap-k', text: '흐름' }), f.title + (f.desc ? ' — ' + f.desc : '')]),
         capFoot(f.src)
       ], exBlock(s.node, selfMarks(s.node), '이 단계의 예시')));
       return;
     }
-    var id = state.hotId && state.nodes[state.hotId] ? state.hotId : state.selId;
-    if (!id || !state.nodes[id]) {
+    var id = state.selId && state.nodes[state.selId] ? state.selId : null;
+    var info = [];
+    if (!id) {
       var v = state.viewId;
-      var info = [];
       if (v) {
-        info.push(capHead(v, '', null));
-        info.push(el('p', { class: 'cap-desc', text: state.nodes[v].data.desc }));
-      } else if (isStr(state.meta.subtitle)) info.push(el('p', { class: 'cap-desc', text: state.meta.subtitle }));
+        var used0 = {};
+        info.push(capHead(v, '', el('span', { class: 'cap-badge soft', text: '지금 보는 영역' })));
+        info = info.concat(keyRole(v, used0));
+        info.push(moreBox(v, used0, true));
+      } else {
+        var mf = mainFlowBox();
+        if (mf) info.push(mf);
+        else if (isStr(state.meta.subtitle)) info.push(el('p', { class: 'cap-desc' }, [richText(state.meta.subtitle)]));
+      }
       info.push(el('p', { class: 'cap-hint', text: HINT }));
-      info.push(el('p', { class: 'cap-sub', text: '터치: 한 번 눌러 설명 · 다시 눌러 들어가기 · 키보드: Tab 이동, Enter 들어가기, Esc 상위로' }));
-      box.appendChild(capCard(info, v ? exBlock(v, childMarks(v, true), '예시 — 번호는 장면의 블록') : null));
+      info.push(el('p', { class: 'cap-sub', text: '키보드: Tab·화살표로 이동 · Enter 선택 → 한 번 더 Enter로 들어가기 · Esc 상위로' }));
+      box.appendChild(capCard(info, null));
       return;
     }
-    var n = state.nodes[id];
-    var acts = el('span', { class: 'cap-acts' }, [
-      id === state.selId ? el('span', { class: 'cap-badge', text: '● 선택됨' }) : null,
-      n.childIds.length ? el('button', { type: 'button', class: 'ghost-btn sm is-primary', 'data-drill': id, text: '들어가기 › (하위 ' + n.childIds.length + ')' }) : null
-    ]);
-    box.appendChild(capCard([
-      capHead(id, '', acts),
-      el('p', { class: 'cap-desc', text: n.data.desc }),
-      capFoot(n.data.src, relatedTerms(id))
-    ], exBlock(id, n.childIds.length ? childMarks(id, false) : selfMarks(id), '예시')));
+    var n = state.nodes[id], used = {};
+    info.push(capHead(id, '', el('span', { class: 'cap-acts' }, [
+      el('span', { class: 'cap-badge', text: '● 선택됨' }),
+      el('span', { class: 'cap-sub2', text: n.childIds.length ? '하위 ' + n.childIds.length + '개 — 블록을 한 번 더 누르면 안으로 들어갑니다' : '끝 — 더 들어갈 하위 항목이 없습니다' })
+    ])));
+    info = info.concat(keyRole(id, used));
+    info.push(moreBox(id, used, false));
+    box.appendChild(capCard(info, null));
   }
 
   /* ---------------- 이동 ---------------- */
@@ -1039,31 +1139,51 @@
 
   function select(id) {
     state.selId = id;
-    applyClasses(); updateCaption(); updateOutline();
+    // 좁은 화면: 소개가 펼쳐진 채로 블록을 고르면 소개를 접어 설명 칸이 바로 보이게 한다
+    if (id && document.body.classList.contains('hero-open') && document.documentElement.clientWidth < 768) setHeroCompact(true);
+    applyClasses(); updateTop(); updateCaption(); updateOutline();
   }
 
+  // 첫 클릭(Enter)은 선택, 선택된 블록을 한 번 더 누르면 안으로 들어간다.
   function activate(key, viaKey) {
     if (state.mode === 'flow') { if (key.charAt(0) === 's') { stopAutoplay(); goStep(+key.slice(1)); } return; }
     var n = state.nodes[key];
     if (!n) return;
-    if (state.lastPointer === 'touch' && !viaKey && state.selId !== key) { select(key); return; }
+    if (state.selId !== key) { select(key); return; }
     if (n.childIds.length) drill(key, viaKey);
-    else select(key);
   }
 
   function setMode(mode) {
     if (mode === 'flow' && !state.flows.length) return;
     stopAutoplay();
+    if (mode === 'flow' && visibleFlows().indexOf(state.flowIndex) < 0) { state.flowIndex = mainFlowIndex(); state.step = 0; }
     state.mode = mode; state.hotId = null;
     render();
   }
 
+  function openFlow(i) {
+    if (!state.flows[i]) return;
+    stopAutoplay();
+    state.flowIndex = i; state.step = 0; state.mode = 'flow'; state.hotId = null;
+    render();
+  }
+
   /* ---------------- 흐름 조작 ---------------- */
+  // 흐름 선택 목록: 기본 흐름 + 지금 펼친 위치와 관련된 상세 흐름만
+  function syncFlowSelect() {
+    var sel = $('flow-select'), vis = visibleFlows();
+    if (vis.indexOf(state.flowIndex) < 0) vis.push(state.flowIndex);
+    sel.textContent = '';
+    vis.forEach(function (i) {
+      var f = state.flows[i];
+      sel.appendChild(el('option', { value: i, text: (f.main ? '기본 흐름 · ' : '상세 · ') + f.title + ' (' + f.steps.length + '단계)' }));
+    });
+    sel.value = String(state.flowIndex);
+    $('flow-select-wrap').hidden = vis.length < 2;
+  }
+
   function renderFlowSelect() {
     var sel = $('flow-select');
-    sel.textContent = '';
-    state.flows.forEach(function (f, i) { sel.appendChild(el('option', { value: i, text: (i + 1) + '. ' + f.title })); });
-    $('flow-select-wrap').hidden = state.flows.length < 2;
     sel.addEventListener('change', function () { stopAutoplay(); state.flowIndex = +sel.value || 0; state.step = 0; render(); });
   }
 
@@ -1102,6 +1222,8 @@
 
   function openDrawer(pane, opener) {
     stopAutoplay();
+    if (tour.i >= 0) endTour(true);
+    hideTip();
     state.drawerOpener = opener || document.activeElement;
     $('drawer-title').textContent = PANE_TITLES[pane] || '';
     each('#drawer .pane', function (p) { p.hidden = p.getAttribute('data-pane') !== pane; });
@@ -1186,27 +1308,44 @@
     }
   }
 
+  function termRow(t) {
+    var nodeBtns = t.nodes.map(function (id) { return el('button', { type: 'button', class: 'term-chip', 'data-go': id, text: '◇ ' + state.nodes[id].data.label }); });
+    return el('div', { class: 'term-row', 'data-q': norm(t.term + ' ' + t.summary + ' ' + t.vs.term + ' ' + t.vs.diff) }, [
+      el('dt', { class: 't-main' }, [el('span', { class: 'lv lv-' + t.level, title: '레벨 ' + t.level, text: 'L' + t.level }), ' ', el('strong', { text: t.term }), ': ' + t.summary]),
+      el('dd', { class: 't-vs' }, [el('strong', { text: 'vs ' + t.vs.term }), ': ' + t.vs.diff]),
+      el('dd', { class: 't-meta' }, [el('span', null, ['출처: ', srcLinks(t.src)])].concat(nodeBtns))
+    ]);
+  }
+
+  // L1 용어는 기본 표시, L2·L3는 "더 보기" 뒤에. 검색하면 전부에서 찾는다.
   function buildTerms() {
-    var dl = $('term-list');
-    dl.textContent = '';
-    state.terms.forEach(function (t) {
-      var nodeBtns = t.nodes.map(function (id) { return el('button', { type: 'button', class: 'term-chip', 'data-go': id, text: '◇ ' + state.nodes[id].data.label }); });
-      dl.appendChild(el('div', { class: 'term-row', 'data-q': norm(t.term + ' ' + t.summary + ' ' + t.vs.term + ' ' + t.vs.diff) }, [
-        el('dt', { class: 't-main' }, [el('strong', { text: t.term }), ': ' + t.summary]),
-        el('dd', { class: 't-vs' }, [el('strong', { text: 'vs ' + t.vs.term }), ': ' + t.vs.diff]),
-        el('dd', { class: 't-meta' }, [el('span', null, ['출처: ', srcLinks(t.src)])].concat(nodeBtns))
-      ]));
+    var dl = $('term-list'), more = $('term-list-more'), nMore = 0, nOne = 0;
+    dl.textContent = ''; more.textContent = '';
+    state.terms.slice().sort(function (a, b) { return a.level - b.level || state.terms.indexOf(a) - state.terms.indexOf(b); }).forEach(function (t) {
+      if (t.level === 1) { dl.appendChild(termRow(t)); nOne++; } else { more.appendChild(termRow(t)); nMore++; }
     });
+    state.termsMoreCount = nMore;
+    if (!nOne && nMore) state.termsMore = true;
     if (!state.terms.length) dl.appendChild(el('dt', { class: 'pane-note', text: '표시할 용어 데이터가 없습니다.' }));
+    syncTermsMore();
+  }
+
+  function syncTermsMore() {
+    var q = norm($('term-search').value), open = !!q || state.termsMore, btn = $('term-more');
+    $('term-list-more').hidden = !open;
+    btn.hidden = !!q || !state.termsMoreCount;
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    btn.textContent = state.termsMore ? '접기 (L2·L3 ' + state.termsMoreCount + '개)' : '더 보기 (L2·L3 ' + state.termsMoreCount + '개)';
   }
 
   function filterTerms() {
     var q = norm($('term-search').value), shown = 0;
-    each('#term-list .term-row', function (r) {
+    each('#drawer .term-row', function (r) {
       var ok = !q || r.getAttribute('data-q').indexOf(q) >= 0;
       r.hidden = !ok;
       if (ok) shown++;
     });
+    syncTermsMore();
     $('term-empty').hidden = shown > 0 || !state.terms.length;
   }
 
@@ -1273,6 +1412,116 @@
     warnings.forEach(function (w) { ul.appendChild(el('li', { text: w })); });
   }
 
+  /* ---------------- 첫 화면 소개(핵심 한 줄) ---------------- */
+  var RELATION = [
+    { id: 'docker', pre: 'Docker로', text: '상자를 만들고' },
+    { id: 'cicd', pre: 'CI/CD로', text: '자동으로 만들어' },
+    { id: 'k8s', pre: 'Kubernetes로', text: '운영하고' },
+    { id: 'monitoring', pre: 'Monitoring으로', text: '지켜본다' }
+  ];
+  function heroKey() { return 'guide.hero.' + (state.meta.id || 'page'); }
+  function tourKey() { return 'guide.tour.' + (state.meta.id || 'page'); }
+
+  function renderHero() {
+    var m = state.meta || {};
+    var key = isStr(m.keyPoint) ? m.keyPoint : (isStr(m.subtitle) ? m.subtitle : '');
+    $('hero-eyebrow').textContent = isStr(m.eyebrow) ? m.eyebrow : '';
+    var hk = $('hero-key');
+    hk.textContent = '';
+    hk.appendChild(richText(key));
+    var learn = Array.isArray(m.learn) ? m.learn.filter(isStr).slice(0, 3) : [];
+    var ul = $('hero-learn');
+    ul.textContent = '';
+    learn.forEach(function (line) { ul.appendChild(el('li', null, [richText(line)])); });
+    $('hero-learn-wrap').hidden = !learn.length;
+    var rel = $('relation');
+    rel.textContent = '';
+    RELATION.forEach(function (r) {
+      var g = null;
+      GUIDES.forEach(function (x) { if (x.id === r.id) g = x; });
+      if (!g) return;
+      var cur = r.id === m.id;
+      rel.appendChild(el('li', { class: cur ? 'is-current' : '' }, [
+        cur ? el('span', { class: 'rel-link', 'aria-current': 'page' }, [el('strong', { text: r.pre }), ' ' + r.text])
+          : el('a', { class: 'rel-link', href: g.href }, [el('strong', { text: r.pre }), ' ' + r.text])
+      ]));
+    });
+    setHeroCompact(store(heroKey()) === 'compact');
+  }
+
+  function setHeroCompact(on) {
+    $('hero').classList.toggle('is-compact', on);
+    document.body.classList.toggle('hero-open', !on);
+    $('hero-toggle').hidden = !on;
+    $('hero-toggle').setAttribute('aria-expanded', on ? 'false' : 'true');
+    if (state.forceRender) state.forceRender();
+  }
+
+  /* ---------------- 첫 방문 둘러보기(3~5단계, 건너뛰기 가능) ---------------- */
+  var tour = { i: -1, steps: [], opener: null };
+  function tourSteps() {
+    var n = itemsOf(baseView()).length;
+    return [
+      { sel: '#hero', title: '이 페이지의 핵심 한 줄', text: '맨 위 한 줄이 이 페이지가 무엇인지입니다. [여기서 시작]을 누르면 소개가 접히고 바로 탐색을 시작합니다.' },
+      { sel: '#stage', title: '먼저 핵심 ' + n + '개만', text: '처음에는 핵심 구성요소(L1)만 보입니다' + (chainRoots() ? '. 화살표는 기본 흐름 순서입니다' : '') + '. 블록을 한 번 누르면 설명, 한 번 더 누르면 그 안(L2)으로 들어갑니다.' },
+      { sel: '#caption', title: '설명은 짧게, 자세한 건 접어서', text: '선택한 블록이 무엇이고 왜 필요한지, 누구에게 받아서 누구에게 넘기는지 보여 줍니다. 점선 밑줄 용어는 올리거나 누르면 뜻이 나오고, 더 알고 싶으면 [자세히 보기]를 펼치세요.' },
+      { sel: '#crumbs', title: '지금 위치와 되돌아가기', text: '안으로 들어갈수록 "페이지 › 영역 › 항목"처럼 경로가 쌓입니다. 앞 항목을 누르거나 Esc를 누르면 한 단계 위로 돌아갑니다.' },
+      { sel: '.tb-actions', title: '필요할 때 쓰는 도구', text: '⇢ 흐름은 단계별 재생, Aa 용어는 용어 사전(L1 먼저), ☰ 구조는 전체 목차, § 출처는 공식 문서 목록입니다. ? 둘러보기로 이 안내를 다시 볼 수 있습니다.' }
+    ];
+  }
+
+  function startTour() {
+    if (!$('tour')) return;
+    closeDrawer(); hideTip();
+    tour.steps = tourSteps();
+    tour.opener = document.activeElement;
+    showTourStep(0);
+  }
+
+  function showTourStep(i) {
+    tour.i = i;
+    each('.tour-target', function (n) { n.classList.remove('tour-target'); });
+    var st = tour.steps[i], t = document.querySelector(st.sel);
+    $('tour').hidden = false;
+    $('tour-count').textContent = (i + 1) + ' / ' + tour.steps.length;
+    $('tour-title').textContent = st.title;
+    $('tour-text').textContent = st.text;
+    $('tour-prev').disabled = i === 0;
+    $('tour-next').textContent = i === tour.steps.length - 1 ? '완료' : '다음 ›';
+    if (t) {
+      t.classList.add('tour-target');
+      if (t.scrollIntoView) t.scrollIntoView({ block: 'nearest' });
+    }
+    positionTour();
+    $('tour-next').focus({ preventScroll: true });
+  }
+
+  function positionTour() {
+    if (tour.i < 0) return;
+    var box = $('tour'), t = document.querySelector(tour.steps[tour.i].sel);
+    var vw = document.documentElement.clientWidth, vh = window.innerHeight;
+    if (vw < 768 || !t) { box.classList.add('tour-sheet'); box.style.left = ''; box.style.top = ''; return; }
+    box.classList.remove('tour-sheet');
+    var r = t.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
+    var x = Math.max(12, Math.min(vw - 12 - w, r.left + r.width / 2 - w / 2));
+    var y = r.bottom + 12;
+    if (y + h > vh - 8) y = r.top - h - 12;
+    if (y < 8) y = Math.max(8, Math.min(vh - h - 8, r.top + 16));
+    box.style.left = x + 'px'; box.style.top = y + 'px';
+  }
+
+  function endTour(silent) {
+    if (tour.i < 0) return;
+    tour.i = -1;
+    store(tourKey(), 'done');
+    $('tour').hidden = true;
+    each('.tour-target', function (n) { n.classList.remove('tour-target'); });
+    if (silent) return;
+    var o = tour.opener;
+    if (o && o !== document.body && document.contains(o) && o.focus) o.focus();
+    else { var f = $('stage-labels').querySelector('.lbl'); if (f) f.focus(); }
+  }
+
   /* ---------------- 이벤트 ---------------- */
   function keyOf(target) {
     var n = target && target.closest ? target.closest('[data-key]') : null;
@@ -1287,7 +1536,6 @@
     stage.addEventListener('click', function (e) {
       var k = keyOf(e.target);
       if (!k) { if (state.lastPointer === 'touch') setHot(null); return; }
-      if (state.lastPointer === 'touch') setHot(k);
       activate(k, e.detail === 0);
       state.lastPointer = 'mouse';
     });
@@ -1323,10 +1571,38 @@
     $('expand-all').addEventListener('click', function () { state.order.forEach(function (id) { setOutlineOpen(id, true); }); });
     $('collapse-all').addEventListener('click', function () { state.order.forEach(function (id) { setOutlineOpen(id, false); }); });
     $('term-search').addEventListener('input', filterTerms);
+    $('term-more').addEventListener('click', function () { state.termsMore = !state.termsMore; syncTermsMore(); });
+
+    // 첫 화면 소개 · 둘러보기
+    $('hero-start').addEventListener('click', function () {
+      store(heroKey(), 'compact');
+      setHeroCompact(true);
+      var f = $('stage-labels').querySelector('.lbl');
+      if (f) f.focus();
+    });
+    $('hero-toggle').addEventListener('click', function () { store(heroKey(), 'open'); setHeroCompact(false); $('hero-start').focus(); });
+    $('tour-btn').addEventListener('click', startTour);
+    $('tour-next').addEventListener('click', function () { if (tour.i >= tour.steps.length - 1) endTour(); else showTourStep(tour.i + 1); });
+    $('tour-prev').addEventListener('click', function () { if (tour.i > 0) showTourStep(tour.i - 1); });
+    $('tour-skip').addEventListener('click', function () { endTour(); });
+    $('caption').addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('cap-more')) state.moreOpen = e.target.open; }, true);
+
+    // 용어 툴팁: 올리기·포커스·누르기 모두 지원
+    function ttOf(t) { return t && t.closest ? t.closest('.tt') : null; }
+    document.addEventListener('mouseover', function (e) { var b = ttOf(e.target); if (b) showTip(b); });
+    document.addEventListener('mouseout', function (e) {
+      var b = ttOf(e.target);
+      if (b && b === tipOwner && !(e.relatedTarget && b.contains(e.relatedTarget)) && document.activeElement !== b) hideTip();
+    });
+    document.addEventListener('focusin', function (e) { var b = ttOf(e.target); if (b) showTip(b); else if (tipOwner) hideTip(); });
+    document.addEventListener('click', function (e) { var b = ttOf(e.target); if (b) { e.preventDefault(); showTip(b); } else if (tipOwner) hideTip(); });
+    window.addEventListener('scroll', hideTip, true);
 
     function onAction(e) {
-      var t = e.target.closest('[data-go],[data-toggle],[data-drill],[data-term]');
+      var t = e.target.closest('[data-go],[data-toggle],[data-drill],[data-term],[data-flow],[data-sel]');
       if (!t) return;
+      if (t.hasAttribute('data-flow')) { openFlow(+t.getAttribute('data-flow')); return; }
+      if (t.hasAttribute('data-sel')) { var sid = t.getAttribute('data-sel'); select(sid); focusLabel(sid); return; }
       if (t.hasAttribute('data-toggle')) {
         var id = t.getAttribute('data-toggle');
         setOutlineOpen(id, t.getAttribute('aria-expanded') !== 'true');
@@ -1350,6 +1626,8 @@
     $('step-play').addEventListener('click', function () { if (state.timer) stopAutoplay(); else startAutoplay(); });
 
     document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && tour.i >= 0) { e.preventDefault(); endTour(); return; }
+      if (e.key === 'Escape' && tipOwner) { e.preventDefault(); var o = tipOwner; hideTip(); if (o.focus) o.focus(); return; }
       if (!$('drawer').hidden) {
         if (e.key === 'Escape') { e.preventDefault(); closeDrawer(); }
         else if (e.key === 'Tab') trapFocus(e);
@@ -1381,7 +1659,7 @@
       raf = requestAnimationFrame(run);
       timer = setTimeout(run, 140);
     }
-    window.addEventListener('resize', schedule);
+    window.addEventListener('resize', function () { schedule(); hideTip(); positionTour(); });
     if (window.ResizeObserver) new ResizeObserver(schedule).observe(stage);
     state.forceRender = function () { lastW = -1; schedule(); };
   }
@@ -1412,6 +1690,7 @@
     });
     safe('흐름 검증', function () { validateFlows(data.flows); });
     safe('용어 검증', function () { validateTerms(data.terms); });
+    safe('첫 화면 소개', renderHero);
 
     safe('구조 목록', buildOutline);
     safe('용어 목록', buildTerms);
@@ -1423,7 +1702,9 @@
     safe('이벤트 연결', bindEvents);
     render();
     renderWarnings();
-    window.__guide = { state: state, render: render, warnings: warnings };
+    // 첫 방문이면 둘러보기를 자동으로 띄운다(저장소를 쓸 수 없으면 매번 뜨지만 건너뛰기로 닫을 수 있다)
+    if (store(tourKey()) !== 'done') setTimeout(function () { safe('둘러보기', startTour); }, 450);
+    window.__guide = { state: state, render: render, warnings: warnings, startTour: startTour, endTour: endTour };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
