@@ -32,7 +32,6 @@
     .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .eyebrow { margin: 0; font: 600 11px/1.4 var(--mono); letter-spacing: .26em; color: var(--lav); }
     .pill { min-height: 34px; padding: 6px 14px; border: 1px solid var(--line-2); border-radius: 999px; background: none; color: var(--soft); font: inherit; font-size: 13px; cursor: pointer; }
-    .pill.is-off { border-color: var(--lav-3); color: var(--lav); }
     h1 { margin: 22px 0 10px; font-size: clamp(28px, 4.4vw, 46px); line-height: 1.2; font-weight: 800; letter-spacing: -.02em; }
     .lead { margin: 0; max-width: 640px; color: var(--muted); font-size: 15px; }
     .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 18px; }
@@ -76,8 +75,6 @@
       .card { grid-template-columns: 30px 1fr; }
       .c-go { display: none; }
     }
-    html.kb-reduce *, html.kb-reduce *::before, html.kb-reduce *::after { animation: none !important; transition: none !important; }
-    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; } }
   </style>
 </head>
 <body>
@@ -85,7 +82,6 @@
   <div class="wrap">
     <header class="top">
       <p class="eyebrow">INFRA KNOWLEDGE BASE</p>
-      <button type="button" class="pill" id="motion-btn">애니메이션 끄기</button>
     </header>
     <main>
       <h1>코드 한 줄이 서비스가 되기까지</h1>
@@ -127,18 +123,6 @@
       return [sx, sy - z1];
     }
     var reduce = false;
-    function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { } return null; }
-    function setMotion(r, save) {
-      reduce = r;
-      document.documentElement.classList.toggle('kb-reduce', r);
-      var mb = document.getElementById('motion-btn');
-      mb.textContent = r ? '애니메이션 켜기' : '애니메이션 끄기';
-      mb.classList.toggle('is-off', r);
-      if (save) store('kb-motion', r ? 'reduce' : 'full');
-    }
-    var pref = store('kb-motion');
-    setMotion(pref ? pref === 'reduce' : !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches), false);
-    document.getElementById('motion-btn').addEventListener('click', function () { setMotion(!reduce, true); });
 
     var svgEl = document.getElementById('map-svg'), map = document.getElementById('map'), list = document.getElementById('list');
     var base = s('g', { 'class': 'base' }, svgEl);

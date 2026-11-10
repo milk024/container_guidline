@@ -106,7 +106,6 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .pill:hover { border-color: var(--lav-3); color: var(--text); }
 .pill:disabled { opacity: .35; cursor: default; }
 .pill.is-primary { background: var(--lav); color: #000; border-color: var(--lav); font-weight: 700; }
-#motion-btn.is-off { border-color: var(--lav-3); color: var(--lav); }
 
 /* ---------------- 레이아웃 ---------------- */
 .layout { position: relative; z-index: 1; display: block; }
@@ -538,9 +537,3 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
   .tours__title { font-size: 22px; }
 }
 
-/* ---------------- 움직임 줄이기 ---------------- */
-html.kb-reduce *, html.kb-reduce *::before, html.kb-reduce *::after { animation: none !important; transition: none !important; }
-html.kb-reduce .tours::before { display: none; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
-}

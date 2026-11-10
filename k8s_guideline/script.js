@@ -585,8 +585,8 @@
   function keyOf(id) { var d = nd(id); return d.key || d.desc; }
   function kidsOf(id) { return id ? state.nodes[id].childIds : state.rootIds; }
   function siblingsOf(id) { var p = state.nodes[id].parentId; return p ? state.nodes[p].childIds : state.rootIds; }
-  var reduced = false;
-  function motionOff() { return reduced; }
+  // 애니메이션은 항상 켜 둔다(끄는 버튼·설정 없음)
+  function motionOff() { return false; }
   function later(fn, ms) { if (motionOff()) fn(); else setTimeout(fn, ms); }
 
   /* ---------------- 등각 도구 ----------------
@@ -1729,16 +1729,6 @@
     });
   }
 
-  /* ---------------- 움직임 줄이기 ---------------- */
-  function setMotion(reduce, save) {
-    reduced = reduce;
-    document.documentElement.classList.toggle('kb-reduce', reduce);
-    var mb = $('motion-btn');
-    mb.textContent = reduce ? '애니메이션 켜기' : '애니메이션 끄기';
-    mb.title = reduce ? '지금은 장면 움직임이 꺼져 있습니다' : '장면 움직임을 줄입니다';
-    mb.classList.toggle('is-off', reduce);
-    if (save) store('kb-motion', reduce ? 'reduce' : 'full');
-  }
 
   /* ---------------- 이벤트 ---------------- */
   function idFrom(t) {
@@ -1782,7 +1772,6 @@
     $('open-outline').addEventListener('click', function () { openDrawer('outline', this); });
     $('open-terms').addEventListener('click', function () { openDrawer('terms', this); });
     $('open-sources').addEventListener('click', function () { openDrawer('sources', this); });
-    $('motion-btn').addEventListener('click', function () { setMotion(!reduced, true); });
     // 흐름 패널
     $('tours-list').addEventListener('click', function (e) { var b = e.target.closest('[data-flow]'); if (b) openFlow(+b.getAttribute('data-flow')); });
     $('tours-view').addEventListener('click', function (e) {
@@ -1872,8 +1861,6 @@
   /* ---------------- 시작 ---------------- */
   function init() {
     var data = window.GUIDE_DATA;
-    var pref = store('kb-motion');
-    setMotion(pref ? pref === 'reduce' : !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), false);
     if (!data || typeof data !== 'object') {
       warn('data.js를 불러오지 못했습니다. index.html과 같은 폴더에 data.js가 있는지 확인하세요.');
       renderWarnings();
