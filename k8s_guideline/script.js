@@ -1,43 +1,40 @@
 /* ==========================================================================
-   공통 렌더링 엔진 — 4개 학습 페이지가 동일한 파일을 사용합니다.
-   내용(구조·흐름·용어·출처)은 같은 폴더의 data.js(window.GUIDE_DATA)에만 있습니다.
-   - 점진적 공개: 첫 화면은 L1(핵심 구성요소 3~5개)과 기본 흐름만, 노드를 열 때마다 L2 → L3로 한 단계씩 내려갑니다.
-   - 아이소메트릭(등각) 보드 위에 심볼(육각 배지+아이콘)로 그리고, L1은 기본 흐름 순서대로 화살표로 잇습니다.
-   - 한 번 누르면 선택(핵심·역할 표시), 선택된 것을 한 번 더 누르면 그 안으로 들어갑니다. 포인터를 올리면 강조만 됩니다.
-   - 본문 속 용어는 툴팁(요약 1줄 + 비교 1개)으로, 첫 방문에는 3~5단계 둘러보기(건너뛰기 가능)를 보여 줍니다.
+   공통 렌더링 엔진 — 5개 학습 페이지가 동일한 파일을 사용합니다.
+   내용(구조·흐름·용어·출처)은 같은 폴더의 data.js(window.GUIDE_DATA)에만,
+   첫 화면의 손으로 그린 입체 장면은 같은 폴더의 scene.js(window.GUIDE_SCENE)에만 있습니다.
+   - 첫 화면: 가이드별 입체(등각) 장면. 영역을 누르면 그 안(L2)으로 들어가고, 안에서는 구성 요소를 눌러 설명창을 엽니다.
+   - 오른쪽 흐름 패널: 흐름을 고르면 단계마다 장면의 해당 부분이 빛나고, 이전 단계에서 빛나는 점이 이동합니다.
+   - 설명창: 왼쪽은 하위 요소를 분해한 그림, 오른쪽은 개요 → 하위 요소 → 예시 순서의 넘김 슬라이드.
+   - 실습 창: data.js의 예시(examples)를 기본 흐름 순서로 묶어 보여 줍니다(끌어서 옮기고 접을 수 있음).
    - 데이터 일부가 잘못되어도 해당 항목만 건너뛰고 경고를 표시하며, 나머지는 동작합니다.
-   - 외부 라이브러리 없이 순수 JavaScript(ES5)로 작성해 file://에서도 그대로 동작합니다.
+   - 외부 라이브러리·CDN 없이 순수 JavaScript(ES5)로 작성해 file://에서도 그대로 동작합니다.
    ========================================================================== */
 (function () {
   'use strict';
 
   var GUIDES = [
-    { id: 'docker', label: 'Docker', en: 'DOCKER', href: '../docker_guideline/index.html' },
-    { id: 'k8s', label: 'Kubernetes', en: 'KUBERNETES', href: '../k8s_guideline/index.html' },
-    { id: 'cicd', label: 'CI/CD', en: 'CI/CD', href: '../ci_cd_guideline/index.html' },
-    { id: 'monitoring', label: '모니터링', en: 'MONITORING', href: '../monitoring_guideline/index.html' },
-    { id: 'gitflow', label: 'Git Flow·커밋', en: 'GIT FLOW', href: '../git_flow_commit_guideline/index.html' }
+    { id: 'gitflow', label: 'Git Flow·커밋', en: 'GIT FLOW', href: '../git_flow_commit_guideline/index.html', h: 268 },
+    { id: 'cicd', label: 'CI/CD', en: 'CI/CD', href: '../ci_cd_guideline/index.html', h: 158 },
+    { id: 'docker', label: 'Docker', en: 'DOCKER', href: '../docker_guideline/index.html', h: 198 },
+    { id: 'k8s', label: 'Kubernetes', en: 'KUBERNETES', href: '../k8s_guideline/index.html', h: 226 },
+    { id: 'monitoring', label: '모니터링', en: 'MONITORING', href: '../monitoring_guideline/index.html', h: 30 }
   ];
-  var AUTOPLAY_MS = 2400;
-  var GRID_BELOW = 760;          // 이 너비 미만이면 라벨을 장면 아래 번호 목록으로 배치
+  var HUB = '../index.html';
   var NS = 'http://www.w3.org/2000/svg';
-  var C30 = Math.cos(Math.PI / 6), S30 = 0.5;
-  var HINT = '블록을 한 번 누르면 설명, 선택된 블록을 한 번 더 누르면 안으로 들어갑니다';
+  var WIDE = 900;        // 이 너비 이상이면 장면 + 오른쪽 흐름 패널, 미만이면 위아래로 쌓음
+  var COMPACT = 600;     // 장면 폭이 이보다 좁으면 라벨을 번호로 줄이고 아래에 목록을 보여 줌
+  var TYPE_MS = 20;      // 단계 설명 타이핑 속도(글자당)
 
   var warnings = [];
   var state = {
-    nodes: {}, order: [], rootIds: [], sources: {}, terms: [], flows: [],
+    nodes: {}, order: [], rootIds: [], sources: {}, terms: [], flows: [], icons: {},
     meta: {}, guide: null,
-    mode: 'explore',     // 'explore' | 'flow'
-    viewId: null,        // 현재 장면이 보여 주는 부모 노드(null = 최상위)
-    hotId: null,         // 포인터·포커스가 올라간 항목 key
-    selId: null,         // 고정 선택된 노드 id
-    flowIndex: 0, step: 0, timer: null,
-    lastPointer: 'mouse', drawerOpener: null, keyNav: false,
-    moreOpen: false,     // "자세히 보기" 펼침 상태(선택이 바뀌어도 유지)
-    termsMore: false     // 용어 서랍의 L2·L3 펼침 상태
+    viewId: null,        // 지금 장면이 보여 주는 부모 노드(null = 첫 화면 장면)
+    hotId: null,         // 포인터·포커스가 올라간 노드
+    flow: -1, step: 0,   // 진행 중인 흐름과 단계(-1 = 목록)
+    kit: null, vb: [1000, 640], labels: [],
+    modal: null, practice: 0, drawerOpener: null
   };
-
   /* ---------------- 유틸 ---------------- */
   function $(id) { return document.getElementById(id); }
 
@@ -214,28 +211,6 @@
     });
   }
 
-  function baseView() { return state.rootIds.length === 1 ? state.rootIds[0] : null; }
-  function itemsOf(viewId) { return viewId ? state.nodes[viewId].childIds : state.rootIds; }
-  function pathTo(id) { var p = []; while (id) { p.unshift(id); id = state.nodes[id].parentId; } return p; }
-  function enOf(id) { var d = state.nodes[id].data; return (d.en || d.label).toUpperCase(); }
-  function currentFlow() { return state.flows[state.flowIndex] || null; }
-  function mainFlowIndex() {
-    for (var i = 0; i < state.flows.length; i++) if (state.flows[i].main) return i;
-    return 0;
-  }
-  // 지금 보이는 흐름: 기본 흐름(main) + at이 없는 흐름 + 지금 펼친 노드 경로에 걸린 상세 흐름
-  function visibleFlows() {
-    var path = (state.viewId ? pathTo(state.viewId) : []).concat(state.selId && state.nodes[state.selId] ? pathTo(state.selId) : []);
-    var out = [];
-    state.flows.forEach(function (f, i) { if (f.main || !f.at || path.indexOf(f.at) >= 0) out.push(i); });
-    return out;
-  }
-  // L1 장면에서 블록을 화살표로 이을지: 기본 흐름 순서가 최상위 순서와 같을 때만
-  function chainRoots() {
-    var f = state.flows[mainFlowIndex()];
-    if (!f || !f.main || f.steps.length !== state.rootIds.length) return false;
-    return f.steps.every(function (s, i) { return s.node === state.rootIds[i]; });
-  }
 
   /* ---------------- 용어 툴팁 ----------------
      본문 문자열에서 용어가 처음 나오는 곳을 버튼(.tt)으로 감싼다. 같은 설명 안에서는 용어마다 한 번만. */
@@ -300,57 +275,6 @@
     if ($('tip')) $('tip').hidden = true;
   }
 
-  /* ---------------- 등각 투영 ---------------- */
-  // 월드 좌표(x, y: 바닥면, z: 높이) → 화면 좌표. 화면 오른쪽 아래가 +x, 왼쪽 아래가 +y.
-  function project(x, y, z) { return [(x - y) * C30, (x + y) * S30 - z]; }
-
-  function boxCorners(b) {
-    var out = [];
-    [b.z, b.z + b.h].forEach(function (z) {
-      out.push([b.x, b.y, z], [b.x + b.w, b.y, z], [b.x, b.y + b.d, z], [b.x + b.w, b.y + b.d, z]);
-    });
-    return out;
-  }
-
-  function fit(points, R, smax) {
-    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-    points.forEach(function (p) {
-      var q = project(p[0], p[1], p[2]);
-      if (q[0] < minX) minX = q[0]; if (q[0] > maxX) maxX = q[0];
-      if (q[1] < minY) minY = q[1]; if (q[1] > maxY) maxY = q[1];
-    });
-    var bw = Math.max(maxX - minX, 1), bh = Math.max(maxY - minY, 1);
-    var s = Math.max(1, Math.min(R.w / bw, R.h / bh, smax || 16));
-    var ox = R.x + (R.w - bw * s) / 2 - minX * s;
-    var oy = R.y + (R.h - bh * s) / 2 - minY * s;
-    return {
-      s: s,
-      box: { minX: ox + minX * s, maxX: ox + maxX * s, minY: oy + minY * s, maxY: oy + maxY * s },
-      I: function (x, y, z) { var q = project(x, y, z); return [ox + q[0] * s, oy + q[1] * s]; }
-    };
-  }
-
-  function pts(list) { return list.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '); }
-  function poly(parent, list, cls) { var p = svg('polygon', { points: pts(list), class: cls }); parent.appendChild(p); return p; }
-
-  function drawBox(g, P, b, prefix) {
-    var I = P.I, x = b.x, y = b.y, z = b.z, w = b.w, d = b.d, h = b.h, c = prefix || '';
-    poly(g, [I(x, y + d, z), I(x + w, y + d, z), I(x + w, y + d, z + h), I(x, y + d, z + h)], c + 'f-left');
-    poly(g, [I(x + w, y, z), I(x + w, y + d, z), I(x + w, y + d, z + h), I(x + w, y, z + h)], c + 'f-right');
-    poly(g, [I(x, y, z + h), I(x + w, y, z + h), I(x + w, y + d, z + h), I(x, y + d, z + h)], c + 'f-top');
-  }
-
-  function defs() {
-    var d = svg('defs');
-    d.innerHTML =
-      '<filter id="glow" x="-60%" y="-60%" width="220%" height="220%">' +
-      '<feGaussianBlur in="SourceGraphic" stdDeviation="7" result="b"/>' +
-      '<feColorMatrix in="b" type="matrix" values="0 0 0 0 0.62  0 0 0 0 0.46  0 0 0 0 1  0 0 0 0.95 0" result="c"/>' +
-      '<feMerge><feMergeNode in="c"/><feMergeNode in="SourceGraphic"/></feMerge></filter>' +
-      '<marker id="arr-on" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ddd6fe"/></marker>' +
-      '<marker id="arr-off" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6d5fb3"/></marker>';
-    return d;
-  }
 
   /* ---------------- 심볼 아이콘 ----------------
      24×24 선 아이콘(직접 작성). 'c x y r' = 원, 그 밖은 path d. 상표 로고는 쓰지 않는다. */
@@ -478,454 +402,7 @@
     return s;
   }
 
-  function hexPts(cx, cy, r) {
-    var out = [];
-    for (var i = 0; i < 6; i++) { var a = Math.PI / 3 * i - Math.PI / 2; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
-    return out;
-  }
 
-  // 심볼 토큰: 바닥 그림자 + (하위가 있으면 뒤로 겹친 육각형) + 육각 배지 + 아이콘.
-  // 바닥 접점 (bx, by)에서 위로 서 있는 모양. 하위 항목이 있으면 겹친 판으로 "안에 더 있음"을 모양으로 알린다.
-  function symbolToken(parent, bx, by, r, id, opts) {
-    var g = svg('g', { class: 'blk tok' + (opts.cls ? ' ' + opts.cls : ''), 'data-key': opts.key || id });
-    g.appendChild(svg('ellipse', { cx: bx, cy: by, rx: r * 0.95, ry: r * 0.32, class: 'tok-shadow' }));
-    var lift = svg('g', { class: 'lift' });
-    g.appendChild(lift);
-    var cx = bx, cy = by - r * 1.08;
-    var stack = Math.min(opts.kids || 0, 2);
-    for (var s = stack; s >= 1; s--) poly(lift, hexPts(cx + s * r * 0.16, cy - s * r * 0.16, r), 'hx-back');
-    var nm = iconOf(id), lg = !!logoOf(nm);
-    poly(lift, hexPts(cx, cy, r), lg ? 'hx hx-logo' : 'hx');
-    poly(lift, hexPts(cx, cy, r * 0.84), 'hx-in');
-    drawIcon(lift, nm, cx, cy, r * 1.0, 'ico');
-    if (opts.num) {
-      var nr = Math.max(8, Math.min(11, r * 0.34)), nx = cx + r * 0.78, ny = cy - r * 0.72;
-      lift.appendChild(svg('circle', { cx: nx, cy: ny, r: nr, class: 'num-bg' }));
-      var t = svg('text', { x: nx, y: ny, class: 'num-tx', 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': Math.round(nr * 1.05) });
-      t.textContent = String(opts.num);
-      lift.appendChild(t);
-    }
-    parent.appendChild(g);
-    return { g: g, top: [cx + r * 0.87, cy - r * 0.5], center: [cx, cy] };
-  }
-
-  /* ---------------- 라벨 배치 ---------------- */
-  function makeLabel(key, parts, extraCls) {
-    var b = el('button', { type: 'button', class: 'lbl' + (extraCls ? ' ' + extraCls : ''), 'data-key': key }, parts);
-    $('stage-labels').appendChild(b);
-    return b;
-  }
-
-  // 좁은 화면: 장면 아래에 번호가 붙은 라벨 격자를 만든다.
-  function measureGrid(labels, W) {
-    var cols = W >= 520 ? 3 : 2, gap = 8, padX = 12;
-    var cw = Math.floor((W - padX * 2 - gap * (cols - 1)) / cols);
-    labels.forEach(function (l) { l.classList.add('lbl-grid'); l.style.width = cw + 'px'; });
-    var rows = Math.ceil(labels.length / cols), rowH = [], total = 0;
-    for (var r = 0; r < rows; r++) {
-      var h = 0;
-      for (var c = 0; c < cols; c++) { var l = labels[r * cols + c]; if (l) h = Math.max(h, l.offsetHeight); }
-      rowH.push(h); total += h + (r ? gap : 0);
-    }
-    return {
-      total: total,
-      place: function (top) {
-        var y = top;
-        for (var r = 0; r < rows; r++) {
-          for (var c = 0; c < cols; c++) {
-            var l = labels[r * cols + c];
-            if (!l) continue;
-            l.style.left = (padX + c * (cw + gap)) + 'px';
-            l.style.top = y + 'px';
-            l.style.height = rowH[r] + 'px';
-          }
-          y += rowH[r] + gap;
-        }
-      }
-    };
-  }
-
-  function sideColW(W) { return Math.min(240, Math.max(150, Math.floor(W * 0.19))); }
-
-  // 넓은 화면: 장면 좌우에 라벨을 두고 지시선으로 잇는다. 공간이 모자라면 false.
-  function layoutSide(entries, box, W, H, onlyRight) {
-    var colW = sideColW(W);
-    entries.forEach(function (e) { e.el.style.width = colW + 'px'; e.h = e.el.offsetHeight; });
-    var left = [], right = [];
-    if (onlyRight) right = entries.slice();
-    else {
-      var sorted = entries.slice().sort(function (a, b) { return a.ax - b.ax; });
-      var half = Math.floor(sorted.length / 2);
-      sorted.forEach(function (e, i) { (i < half ? left : right).push(e); });
-    }
-    function stack(list) {
-      list.sort(function (a, b) { return a.ay - b.ay; });
-      var y = 10;
-      list.forEach(function (e) { e.top = Math.max(e.ay - e.h / 2, y); y = e.top + e.h + 10; });
-      var lim = H - 10;
-      for (var i = list.length - 1; i >= 0; i--) { list[i].top = Math.min(list[i].top, lim - list[i].h); lim = list[i].top - 10; }
-      return !list.length || list[0].top >= 6;
-    }
-    if (!stack(left) || !stack(right)) return false;
-    left.forEach(function (e) {
-      e.side = 'left';
-      e.x = Math.max(8, box.minX - 30 - colW);
-      e.edge = e.x + colW + 4;
-    });
-    right.forEach(function (e) {
-      e.side = 'right';
-      e.x = Math.min(W - 8 - colW, box.maxX + 30);
-      e.edge = e.x - 4;
-    });
-    entries.forEach(function (e) {
-      e.el.classList.add('lbl-' + e.side);
-      e.el.style.left = e.x + 'px';
-      e.el.style.top = e.top + 'px';
-      e.ly = e.top + Math.min(e.h / 2, 22);
-    });
-    return true;
-  }
-
-  function drawLeaders(layer, entries) {
-    entries.forEach(function (e) {
-      var ex = e.side === 'left' ? e.edge + 16 : e.edge - 16;
-      var g = svg('g', { class: 'leader', 'data-key': e.key });
-      g.appendChild(svg('path', { d: 'M' + e.ax.toFixed(1) + ' ' + e.ay.toFixed(1) + 'L' + ex.toFixed(1) + ' ' + e.ly.toFixed(1) + 'L' + e.edge.toFixed(1) + ' ' + e.ly.toFixed(1) }));
-      g.appendChild(svg('circle', { cx: e.ax, cy: e.ay, r: 2.6 }));
-      layer.appendChild(g);
-    });
-  }
-
-  /* ---------------- 장면 그리기 ---------------- */
-  function sceneContext() {
-    var stage = $('stage');
-    stage.style.minHeight = '';
-    var W = stage.clientWidth, H = stage.clientHeight;
-    var sv = $('scene');
-    sv.textContent = '';
-    $('stage-labels').textContent = '';
-    return { stage: stage, sv: sv, W: W, H: H };
-  }
-
-  function sizeSvg(ctx) {
-    ctx.sv.setAttribute('viewBox', '0 0 ' + ctx.W + ' ' + ctx.H);
-    ctx.sv.setAttribute('width', ctx.W);
-    ctx.sv.setAttribute('height', ctx.H);
-    ctx.sv.appendChild(defs());
-  }
-
-  // 격자 모드에서 장면이 너무 낮아지면 무대 높이를 늘린다(세로 스크롤만 생긴다).
-  function gridRegion(ctx, grid, minScene) {
-    var need = minScene + grid.total + 44;
-    if (ctx.H < need) { ctx.H = need; ctx.stage.style.minHeight = need + 'px'; }
-    grid.place(ctx.H - grid.total - 12);
-    return { x: 16, y: 26, w: ctx.W - 32, h: ctx.H - grid.total - 26 - 28 };
-  }
-
-  function labelParts(id, opts) {
-    var d = state.nodes[id].data, kids = state.nodes[id].childIds.length;
-    return [
-      opts.num ? el('span', { class: 'lbl-num', 'aria-hidden': 'true', text: pad2(opts.num) }) : null,
-      iconEl(iconOf(id)),
-      el('span', { class: 'lbl-text' }, [
-        d.en ? el('span', { class: 'lbl-en', text: d.en }) : null,
-        el('span', { class: 'lbl-ko', text: d.label }),
-        d.ex && d.ex.v ? el('code', { class: 'lbl-ex', text: d.ex.v }) : null,
-        // 레벨과 하위 유무를 함께 보여 준다(하위가 있으면 한 단계 더 들어갈 수 있음)
-        el('span', { class: 'lbl-meta' }, [
-          el('span', { class: 'lv lv-' + lvOf(id), text: 'L' + lvOf(id) }),
-          el('span', { class: kids ? 'lbl-kids' : 'lbl-leafmark', text: kids ? '하위 ' + kids + '개 ▸' : '끝' })
-        ]),
-        opts.badge ? el('span', { class: 'lbl-badge', text: '' }) : null,
-        el('span', { class: 'sel-badge', text: '선택됨' })
-      ])
-    ];
-  }
-
-  function renderExplore(forceGrid) {
-    var ctx = sceneContext();
-    if (ctx.W < 40 || ctx.H < 40) return;
-    var items = itemsOf(state.viewId);
-    if (!items.length) { sizeSvg(ctx); $('stage-labels').appendChild(el('p', { class: 'stage-empty', text: '표시할 구조 데이터가 없습니다.' })); return; }
-    var grid = forceGrid || ctx.W < GRID_BELOW;
-    var chain = state.viewId === null && chainRoots();
-
-    var labels = items.map(function (id, i) { return makeLabel(id, labelParts(id, { num: i + 1 })); });
-    var R, g;
-    if (grid) { g = measureGrid(labels, ctx.W); R = gridRegion(ctx, g, 210); }
-    else { var cw2 = sideColW(ctx.W); R = { x: cw2 + 58, y: 34, w: ctx.W - (cw2 + 58) * 2, h: ctx.H - 60 }; }
-    sizeSvg(ctx);
-
-    var model = boardModel(items, chain);
-    var all = [];
-    model.boxes.forEach(function (b) { all = all.concat(boxCorners(b)); });
-    var P = fit(all, R, 13);
-
-    var base = svg('g', { class: 'scene-base' }), blocks = svg('g', { class: 'scene-blocks' }), lines = svg('g', { class: 'scene-lines' });
-    ctx.sv.appendChild(base); ctx.sv.appendChild(lines); ctx.sv.appendChild(blocks);
-    var entries = model.draw(base, blocks, P, grid);
-    entries.forEach(function (e, i) { e.el = labels[i]; });
-
-    if (!grid) {
-      if (!layoutSide(entries, P.box, ctx.W, ctx.H, false)) { renderExplore(true); return; }
-      drawLeaders(lines, entries);
-    }
-    applyClasses();
-  }
-
-  // 보드 위에 부품 블록을 격자로 배치. chain이면 뱀 모양 순서(짝수 줄은 거꾸로)로 놓고 화살표로 잇는다.
-  function boardModel(items, chain) {
-    var n = items.length, cols = Math.ceil(Math.sqrt(n)), rows = Math.ceil(n / cols);
-    var CELL = 10, PAD = 2.5, BT = 1.2;
-    var board = { x: 0, y: 0, z: 0, w: cols * CELL + PAD * 2, d: rows * CELL + PAD * 2, h: BT };
-    var blocks = items.map(function (id, i) {
-      var r = Math.floor(i / cols), inRow = Math.min(cols, n - r * cols), c = i % cols;
-      if (chain && r % 2) c = inRow - 1 - c;
-      var off = (cols - inRow) * CELL / 2;
-      var kids = state.nodes[id].childIds.length, fp = 6;
-      return { x: PAD + off + c * CELL + (CELL - fp) / 2, y: PAD + r * CELL + (CELL - fp) / 2, z: BT, w: fp, d: fp, h: 7.5, id: id, kids: kids, idx: i };
-    });
-    return {
-      boxes: [board].concat(blocks.map(function (b) { return { x: b.x, y: b.y, z: b.z, w: b.w, d: b.d, h: b.h }; })),
-      draw: function (base, layer, P, grid) {
-        var I = P.I;
-        var bg = svg('g', { class: 'board' });
-        drawBox(bg, P, board);
-        // 보드 회로 선
-        for (var c = 1; c < cols; c++) {
-          var a = I(PAD + c * CELL, 1, BT), b = I(PAD + c * CELL, board.d - 1, BT);
-          bg.appendChild(svg('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], class: 'trace' }));
-        }
-        for (var r = 1; r < rows; r++) {
-          var a2 = I(1, PAD + r * CELL, BT), b2 = I(board.w - 1, PAD + r * CELL, BT);
-          bg.appendChild(svg('line', { x1: a2[0], y1: a2[1], x2: b2[0], y2: b2[1], class: 'trace' }));
-        }
-        base.appendChild(bg);
-        var entries = [];
-        var r = Math.max(14, Math.min(46, CELL * P.s * 0.3)), tops = {};
-        blocks.forEach(function (b) {
-          var c0 = I(b.x + b.w / 2, b.y + b.d / 2, BT);
-          // 바닥 소켓(보드에 꽂힌 자리)
-          poly(bg, [I(b.x, b.y, BT), I(b.x + b.w, b.y, BT), I(b.x + b.w, b.y + b.d, BT), I(b.x, b.y + b.d, BT)], 'socket');
-          b.foot = c0;
-        });
-        if (chain) {
-          for (var q = 0; q < blocks.length - 1; q++) {
-            var A = blocks[q], B = blocks[q + 1];
-            var ax = A.x + A.w / 2, ay = A.y + A.d / 2, bx = B.x + B.w / 2, by = B.y + B.d / 2;
-            var dx = bx - ax, dy = by - ay, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len, cut = A.w / 2 + 0.7;
-            var p1 = I(ax + ux * cut, ay + uy * cut, BT), p2 = I(bx - ux * cut, by - uy * cut, BT);
-            bg.appendChild(svg('path', { d: 'M' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + 'L' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1), class: 'conn chain', 'marker-end': 'url(#arr-on)' }));
-          }
-        }
-        blocks.slice().sort(function (p, q) { return (p.x + p.y) - (q.x + q.y); }).forEach(function (b) {
-          tops[b.id] = symbolToken(layer, b.foot[0], b.foot[1], r, b.id, { kids: b.kids, num: grid ? b.idx + 1 : 0 }).top;
-        });
-        blocks.forEach(function (b) { entries.push({ key: b.id, ax: tops[b.id][0], ay: tops[b.id][1] }); });
-        return entries;
-      }
-    };
-  }
-
-  // 흐름: 단계 블록을 뱀 모양 트랙으로 잇고 화살표로 방향을 보인다.
-  function renderFlow(forceGrid) {
-    var ctx = sceneContext();
-    var f = currentFlow();
-    if (ctx.W < 40 || ctx.H < 40 || !f) return;
-    var n = f.steps.length, grid = forceGrid || ctx.W < GRID_BELOW;
-    var cols = n <= 3 ? n : Math.ceil(Math.sqrt(n)), SP = 11, FP = 5.6, BT = 1, PAD = 3;
-    var rowsN = Math.ceil(n / cols);
-    var pos = f.steps.map(function (s, i) {
-      var r = Math.floor(i / cols), k = i % cols;
-      if (r % 2) k = cols - 1 - k;
-      return { x: PAD + k * SP, y: PAD + r * SP, z: BT, w: FP, d: FP, h: 2.2, i: i };
-    });
-    var board = { x: 0, y: 0, z: 0, w: PAD * 2 + (cols - 1) * SP + FP, d: PAD * 2 + (rowsN - 1) * SP + FP, h: BT };
-
-    var labels = f.steps.map(function (s, i) {
-      var lb = makeLabel('s' + i, labelParts(s.node, { num: i + 1, badge: true }), 'lbl-step');
-      var bd = lb.querySelector('.lbl-badge'); if (bd) bd.textContent = '● 현재'; // 가장 넓은 배지로 미리 측정(이후 applyFlowState가 갱신)
-      return lb;
-    });
-    var R, g;
-    if (grid) { g = measureGrid(labels, ctx.W); R = gridRegion(ctx, g, 300); }
-    else R = { x: 40, y: 92, w: ctx.W - 80, h: ctx.H - 120 };
-    sizeSvg(ctx);
-
-    var all = boxCorners(board);
-    pos.forEach(function (p) { all = all.concat(boxCorners({ x: p.x, y: p.y, z: p.z, w: p.w, d: p.d, h: 7.5 })); });
-    var P = fit(all, R, 13), I = P.I;
-
-    var base = svg('g', { class: 'board' });
-    drawBox(base, P, board);
-    ctx.sv.appendChild(base);
-    var conn = svg('g', { class: 'scene-lines' });
-    ctx.sv.appendChild(conn);
-    for (var i = 0; i < n - 1; i++) {
-      var a = pos[i], b = pos[i + 1];
-      var ax = a.x + FP / 2, ay = a.y + FP / 2, bx = b.x + FP / 2, by = b.y + FP / 2;
-      var dx = bx - ax, dy = by - ay, len = Math.sqrt(dx * dx + dy * dy) || 1, ux = dx / len, uy = dy / len, cut = FP / 2 + 0.6;
-      var p1 = I(ax + ux * cut, ay + uy * cut, BT), p2 = I(bx - ux * cut, by - uy * cut, BT);
-      conn.appendChild(svg('path', { d: 'M' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1) + 'L' + p2[0].toFixed(1) + ' ' + p2[1].toFixed(1), class: 'conn', 'data-conn': i }));
-    }
-    var layer = svg('g', { class: 'scene-blocks' });
-    ctx.sv.appendChild(layer);
-    var tr = Math.max(15, Math.min(40, SP * P.s * 0.28)), heads = [];
-    pos.forEach(function (p) {
-      poly(base, [I(p.x, p.y, BT), I(p.x + FP, p.y, BT), I(p.x + FP, p.y + FP, BT), I(p.x, p.y + FP, BT)], 'socket');
-    });
-    pos.slice().sort(function (p, q) { return (p.x + p.y) - (q.x + q.y); }).forEach(function (p) {
-      var foot = I(p.x + FP / 2, p.y + FP / 2, BT);
-      heads[p.i] = foot[1] - tr * 2.3;
-      symbolToken(layer, foot[0], foot[1], tr, f.steps[p.i].node, { key: 's' + p.i, cls: 'step', num: p.i + 1 });
-    });
-
-    if (!grid) {
-      var rects = [];
-      for (var j = 0; j < n; j++) {
-        var l = labels[j], p = pos[j], top = I(p.x + FP / 2, p.y + FP / 2, BT); top[1] = heads[j] + 26;
-        l.style.maxWidth = '150px';
-        var w = l.offsetWidth, h = l.offsetHeight;
-        var x = Math.max(8, Math.min(ctx.W - 8 - w, top[0] - w / 2)), y = top[1] - 34 - h;
-        if (y < 4) { renderFlow(true); return; }
-        l.style.left = x + 'px'; l.style.top = y + 'px';
-        rects.push([x, y, x + w, y + h]);
-      }
-      for (var u = 0; u < rects.length; u++) for (var v = u + 1; v < rects.length; v++) {
-        var A = rects[u], B = rects[v];
-        if (A[0] < B[2] + 4 && B[0] < A[2] + 4 && A[1] < B[3] + 2 && B[1] < A[3] + 2) { renderFlow(true); return; }
-      }
-    }
-    applyFlowState();
-    applyClasses();
-  }
-
-  /* ---------------- 상태 반영 ---------------- */
-  var lastScene = null, lastCap = null;
-  function reduceMotion() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
-
-  // 이전 장면을 복제해 겹쳐 두고 흐리게 사라지게 한다(복제본은 조작·보조기술에서 제외).
-  function ghostOut() {
-    var stage = $('stage'), sv = $('scene'), lb = $('stage-labels');
-    if (!sv.firstChild) return;
-    Array.prototype.forEach.call(stage.querySelectorAll('.scene-ghost'), function (n) { n.remove(); });
-    var gh = el('div', { class: 'scene-ghost', 'aria-hidden': 'true' });
-    var s2 = sv.cloneNode(true), l2 = lb.cloneNode(true);
-    [s2, l2].forEach(function (n) {
-      n.removeAttribute('id');
-      Array.prototype.forEach.call(n.querySelectorAll('[id],[data-key],defs'), function (x) {
-        if (x.tagName.toLowerCase() === 'defs') x.remove(); else { x.removeAttribute('id'); x.removeAttribute('data-key'); }
-      });
-      Array.prototype.forEach.call(n.querySelectorAll('button,a,[tabindex]'), function (x) { x.setAttribute('tabindex', '-1'); });
-    });
-    gh.appendChild(s2); gh.appendChild(l2);
-    if ('inert' in gh) gh.inert = true;
-    stage.appendChild(gh);
-    setTimeout(function () { if (gh.parentNode) gh.remove(); }, 420);
-  }
-
-  function enter(n, cls) { n.classList.remove(cls); void n.getBoundingClientRect(); n.classList.add(cls); }
-
-  function render() {
-    var sceneKey = state.mode + '|' + (state.mode === 'flow' ? state.flowIndex : state.viewId);
-    var changed = lastScene !== null && sceneKey !== lastScene;
-    if (changed && !reduceMotion()) safe('장면 전환', ghostOut);
-    lastScene = sceneKey;
-    // 상단·하단을 먼저 채워 무대 크기를 확정한 뒤 장면을 그린다
-    safe('상단 표시', updateTop);
-    safe('설명 표시', updateCaption);
-    safe('장면 그리기', function () {
-      var focusKey = document.activeElement && document.activeElement.closest && document.activeElement.closest('#stage-labels .lbl');
-      focusKey = focusKey ? focusKey.getAttribute('data-key') : null;
-      $('stage').setAttribute('data-mode', state.mode);
-      if (state.mode === 'flow') renderFlow(false); else renderExplore(false);
-      if (changed) { enter($('scene'), 'scene-in'); enter($('stage-labels'), 'scene-in'); }
-      if (focusKey) focusLabel(focusKey);
-    });
-    safe('구조 목록 동기화', updateOutline);
-  }
-
-  function focusLabel(key) {
-    var l = $('stage-labels').querySelector('.lbl[data-key="' + key + '"]');
-    if (l) l.focus({ preventScroll: true });
-  }
-
-  function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
-
-  function applyClasses() {
-    each('#stage [data-key]', function (n) {
-      var k = n.getAttribute('data-key');
-      n.classList.toggle('is-hot', k === state.hotId);
-      n.classList.toggle('is-sel', state.mode === 'explore' && k === state.selId);
-      if (n.tagName === 'BUTTON' && state.mode === 'explore') n.setAttribute('aria-pressed', k === state.selId ? 'true' : 'false');
-    });
-  }
-
-  function applyFlowState() {
-    var f = currentFlow();
-    if (!f) return;
-    var cur = state.step;
-    each('#stage [data-key^="s"]', function (n) {
-      var i = +n.getAttribute('data-key').slice(1);
-      var st = i === cur ? 'cur' : i < cur ? 'done' : 'todo';
-      n.classList.toggle('is-cur', st === 'cur');
-      n.classList.toggle('is-done', st === 'done');
-      n.classList.toggle('is-prev', i === cur - 1);
-      n.classList.toggle('is-next', i === cur + 1);
-      if (n.tagName === 'BUTTON') {
-        n.setAttribute('aria-current', st === 'cur' ? 'step' : 'false');
-        var b = n.querySelector('.lbl-badge');
-        if (b) b.textContent = i === cur ? '● 현재' : i === cur - 1 ? '이전' : i === cur + 1 ? '다음' : i < cur ? '✓ 완료' : '';
-      }
-    });
-    each('#scene .conn', function (c) {
-      var i = +c.getAttribute('data-conn');
-      c.setAttribute('class', 'conn' + (i < cur - 1 ? ' is-done' : i === cur - 1 ? ' is-active' : ''));
-      c.setAttribute('marker-end', i < cur ? 'url(#arr-on)' : 'url(#arr-off)');
-    });
-    $('step-counter').textContent = (cur + 1) + ' / ' + f.steps.length;
-    $('step-prev').disabled = cur <= 0;
-    $('step-next').disabled = cur >= f.steps.length - 1;
-  }
-
-  function setHot(key) {
-    if (state.hotId === key) return;
-    state.hotId = key;
-    applyClasses();   // 포인터·포커스는 강조만 한다(설명은 선택했을 때만 바뀐다)
-  }
-
-  function crumbName(id) { var d = state.nodes[id].data; return d.en || d.label; }
-
-  // 위치 표시: "페이지 › 상위 영역들 › 선택한 항목". 앞 항목을 누르면 그 단계로 돌아간다.
-  function updateTop() {
-    var crumbs = $('crumbs');
-    crumbs.textContent = '';
-    var base = baseView(), trail = [];
-    trail.push({ text: state.guide ? state.guide.label : (state.meta.title || '가이드'), view: base });
-    if (state.viewId) pathTo(state.viewId).forEach(function (id) { if (id !== base) trail.push({ text: crumbName(id), view: id }); });
-    if (state.mode === 'flow') { var f = currentFlow(); trail.push({ text: '흐름: ' + (f ? f.title : '') }); }
-    else if (state.selId && state.nodes[state.selId]) trail.push({ text: crumbName(state.selId) });
-    trail.forEach(function (t, i) {
-      if (i) crumbs.appendChild(el('span', { class: 'crumb-sep', 'aria-hidden': 'true', text: '›' }));
-      var last = i === trail.length - 1;
-      if (!last && t.view !== undefined) crumbs.appendChild(el('button', { type: 'button', class: 'crumb', 'data-view': t.view === null ? '' : t.view, title: '이 단계로 돌아가기', text: t.text }));
-      else crumbs.appendChild(el('span', { class: 'crumb' + (last ? ' is-current' : ''), 'aria-current': last ? 'location' : null, text: t.text }));
-    });
-    var back = $('back-btn');
-    if (state.mode === 'flow') { back.hidden = false; $('back-text').textContent = '구조 탐색'; }
-    else if (state.viewId !== base) {
-      back.hidden = false;
-      var p = state.nodes[state.viewId].parentId;
-      $('back-text').textContent = (p === base || p === null) ? '처음(L1)' : state.nodes[p].data.label;
-    } else back.hidden = true;
-    var tf = $('toggle-flow');
-    tf.setAttribute('aria-pressed', state.mode === 'flow' ? 'true' : 'false');
-    tf.textContent = state.mode === 'flow' ? '◇ 탐색으로' : '⇢ 흐름';
-    $('flow-bar').hidden = state.mode !== 'flow';
-    if (state.mode === 'flow') syncFlowSelect();
-  }
-
-  // 출처: 짧은 칩(전체 제목은 title 속성)
   function srcChips(ids) {
     var wrap = el('span', { class: 'src-chips' });
     (ids || []).forEach(function (id) {
@@ -970,290 +447,6 @@
     ]);
   }
 
-  function lvBadge(id) { return el('span', { class: 'lv lv-' + lvOf(id), title: '레벨 ' + lvOf(id), text: 'L' + lvOf(id) }); }
-
-  function capHead(id, badge, extra) {
-    var d = state.nodes[id].data;
-    return el('div', { class: 'cap-head' }, [
-      badge ? el('span', { class: 'cap-step', text: badge }) : lvBadge(id),
-      el('div', { class: 'cap-title' }, [
-        d.en ? el('span', { class: 'cap-en', text: d.en }) : null,
-        el('strong', { class: 'cap-name', text: d.label })
-      ]),
-      extra || null
-    ]);
-  }
-
-  // ① 핵심(무엇·왜) ② 흐름 속 역할(OO에게 받아서 OO에게 넘긴다)
-  function keyRole(id, used) {
-    var d = state.nodes[id].data, self = selfKeys(id), out = [];
-    out.push(el('p', { class: 'cap-key' }, [richText(d.key || d.desc, used, self)]));
-    if (d.role) out.push(el('p', { class: 'cap-role' }, [el('span', { class: 'cap-k', text: '흐름 속 역할' }), richText(d.role, used, self)]));
-    return out;
-  }
-
-  // ③ 접힌 "자세히 보기": 설명·예시·관련 흐름·용어·출처·다음 단계 버튼
-  function moreBox(id, used, inside) {
-    var n = state.nodes[id], d = n.data, self = selfKeys(id), info = [];
-    if (d.key) info.push(el('p', { class: 'cap-desc' }, [richText(d.desc, used, self)]));
-    var fl = [];
-    state.flows.forEach(function (f, i) {
-      if (f.at === id || (f.main && n.parentId === null && f.steps.some(function (s) { return s.node === id; }))) fl.push(i);
-    });
-    if (fl.length) info.push(el('div', { class: 'cap-row' }, [el('span', { class: 'cap-k', text: '흐름' })].concat(fl.map(function (i) {
-      return el('button', { type: 'button', class: 'ghost-btn sm', 'data-flow': i, text: '⇢ ' + state.flows[i].title + ' (' + state.flows[i].steps.length + '단계)' });
-    }))));
-    info.push(capFoot(d.src, relatedTerms(id)));
-    if (!inside && n.childIds.length) {
-      info.push(el('p', { class: 'cap-next' }, [el('button', { type: 'button', class: 'ghost-btn sm is-primary', 'data-drill': id, text: '다음 단계로 › ' + d.label + ' 안의 L' + Math.min(3, n.depth + 1) + ' ' + n.childIds.length + '개 보기' })]));
-    }
-    var ex = exBlock(id, n.childIds.length ? childMarks(id, inside) : selfMarks(id), inside ? '예시 — 번호는 장면의 블록' : '예시');
-    return el('details', { class: 'cap-more', open: state.moreOpen }, [
-      el('summary', { text: '자세히 보기' }),
-      el('div', { class: 'cap-card' + (ex ? ' has-ex' : '') }, [el('div', { class: 'cap-info' }, info), ex])
-    ]);
-  }
-
-  // L1에서 아무것도 선택하지 않았을 때: 기본 흐름(최대 5단계, 한 줄씩)
-  function mainFlowBox() {
-    var f = state.flows[mainFlowIndex()];
-    if (!f || !f.main) return null;
-    var used = {};
-    return el('div', { class: 'cap-main' }, [
-      el('p', { class: 'cap-main-h' }, [el('span', { class: 'cap-k', text: '기본 흐름' }), f.title]),
-      el('ol', { class: 'main-steps' }, f.steps.slice(0, 5).map(function (s, i) {
-        return el('li', null, [
-          el('button', { type: 'button', class: 'ms-node', 'data-sel': s.node }, [el('span', { class: 'ms-n', 'aria-hidden': 'true', text: String(i + 1) }), state.nodes[s.node].data.label]),
-          el('span', { class: 'ms-text' }, [richText(s.text, used)])
-        ]);
-      }))
-    ]);
-  }
-
-  function capFoot(src, terms) {
-    var foot = el('div', { class: 'cap-foot' });
-    if (terms && terms.length) {
-      foot.appendChild(el('div', { class: 'cap-row' }, [el('span', { class: 'cap-k', text: '용어' }), el('span', { class: 'cap-terms' }, terms.slice(0, 4).map(function (t) {
-        return el('button', { type: 'button', class: 'term-chip', 'data-term': t.term, text: t.term });
-      }))]));
-    }
-    if (src && src.length) foot.appendChild(el('div', { class: 'cap-row' }, [el('span', { class: 'cap-k', text: '출처' }), srcChips(src)]));
-    return foot;
-  }
-
-  function capCard(info, exFig) {
-    return el('div', { class: 'cap-card' + (exFig ? ' has-ex' : '') }, [el('div', { class: 'cap-info' }, info), exFig]);
-  }
-
-  function childMarks(id, numbered) {
-    return state.nodes[id].childIds.map(function (c, i) {
-      var ex = state.nodes[c].data.ex;
-      return { v: ex && ex.v, n: numbered ? i + 1 : 0, key: c };
-    });
-  }
-
-  function selfMarks(id) {
-    var ex = state.nodes[id].data.ex;
-    return ex && ex.v ? [{ v: ex.v, n: 0, key: id }] : [];
-  }
-
-  function updateCaption() {
-    hideTip();
-    var box = $('caption-body');
-    var ck = state.mode + '|' + state.viewId + '|' + state.selId + '|' + state.flowIndex + '|' + (state.mode === 'flow' ? state.step : '');
-    if (lastCap !== null && ck !== lastCap) enter(box, 'cap-in');
-    lastCap = ck;
-    box.textContent = '';
-    if (state.mode === 'flow') {
-      var f = currentFlow();
-      if (!f) { box.appendChild(el('p', { class: 'cap-hint', text: '표시할 흐름 데이터가 없습니다.' })); return; }
-      var s = f.steps[state.step];
-      box.appendChild(capCard([
-        capHead(s.node, 'STEP ' + (state.step + 1) + '/' + f.steps.length,
-          el('button', { type: 'button', class: 'ghost-btn sm', 'data-go': s.node, text: '구조에서 보기 ›' })),
-        el('p', { class: 'cap-desc' }, [richText(s.text, {}, selfKeys(s.node))]),
-        el('p', { class: 'cap-flow' }, [el('span', { class: 'cap-k', text: '흐름' }), f.title + (f.desc ? ' — ' + f.desc : '')]),
-        capFoot(f.src)
-      ], exBlock(s.node, selfMarks(s.node), '이 단계의 예시')));
-      return;
-    }
-    var id = state.selId && state.nodes[state.selId] ? state.selId : null;
-    var info = [];
-    if (!id) {
-      var v = state.viewId;
-      if (v) {
-        var used0 = {};
-        info.push(capHead(v, '', el('span', { class: 'cap-badge soft', text: '지금 보는 영역' })));
-        info = info.concat(keyRole(v, used0));
-        info.push(moreBox(v, used0, true));
-      } else {
-        var mf = mainFlowBox();
-        if (mf) info.push(mf);
-        else if (isStr(state.meta.subtitle)) info.push(el('p', { class: 'cap-desc' }, [richText(state.meta.subtitle)]));
-      }
-      info.push(el('p', { class: 'cap-hint', text: HINT }));
-      info.push(el('p', { class: 'cap-sub', text: '키보드: Tab·화살표로 이동 · Enter 선택 → 한 번 더 Enter로 들어가기 · Esc 상위로' }));
-      box.appendChild(capCard(info, null));
-      return;
-    }
-    var n = state.nodes[id], used = {};
-    info.push(capHead(id, '', el('span', { class: 'cap-acts' }, [
-      el('span', { class: 'cap-badge', text: '● 선택됨' }),
-      el('span', { class: 'cap-sub2', text: n.childIds.length ? '하위 ' + n.childIds.length + '개 — 블록을 한 번 더 누르면 안으로 들어갑니다' : '끝 — 더 들어갈 하위 항목이 없습니다' })
-    ])));
-    info = info.concat(keyRole(id, used));
-    info.push(moreBox(id, used, false));
-    box.appendChild(capCard(info, null));
-  }
-
-  /* ---------------- 이동 ---------------- */
-  function drill(id, viaKey) {
-    if (!state.nodes[id] || !state.nodes[id].childIds.length) return;
-    state.viewId = id; state.selId = null; state.hotId = null;
-    render();
-    if (viaKey) { var f = $('stage-labels').querySelector('.lbl'); if (f) f.focus(); }
-  }
-
-  function up(viaKey) {
-    if (state.mode === 'flow') { setMode('explore'); return; }
-    var base = baseView();
-    if (state.viewId === base) { if (state.selId) { state.selId = null; applyClasses(); updateCaption(); updateOutline(); } return; }
-    var from = state.viewId;
-    var p = state.nodes[from].parentId;
-    state.viewId = p === null ? base : p;
-    state.selId = from; state.hotId = null;
-    render();
-    if (viaKey) focusLabel(from);
-  }
-
-  function focusNode(id) {
-    if (!state.nodes[id]) return;
-    stopAutoplay();
-    state.mode = 'explore';
-    if (id === baseView()) { state.viewId = id; state.selId = null; }
-    else { var p = state.nodes[id].parentId; state.viewId = p === null ? baseView() : p; state.selId = id; }
-    state.hotId = null;
-    render();
-    focusLabel(id);
-  }
-
-  function select(id) {
-    state.selId = id;
-    // 좁은 화면: 소개가 펼쳐진 채로 블록을 고르면 소개를 접어 설명 칸이 바로 보이게 한다
-    if (id && document.body.classList.contains('hero-open') && document.documentElement.clientWidth < 768) setHeroCompact(true);
-    applyClasses(); updateTop(); updateCaption(); updateOutline();
-  }
-
-  // 첫 클릭(Enter)은 선택, 선택된 블록을 한 번 더 누르면 안으로 들어간다.
-  function activate(key, viaKey) {
-    if (state.mode === 'flow') { if (key.charAt(0) === 's') { stopAutoplay(); goStep(+key.slice(1)); } return; }
-    var n = state.nodes[key];
-    if (!n) return;
-    if (state.selId !== key) { select(key); return; }
-    if (n.childIds.length) drill(key, viaKey);
-  }
-
-  function setMode(mode) {
-    if (mode === 'flow' && !state.flows.length) return;
-    stopAutoplay();
-    if (mode === 'flow' && visibleFlows().indexOf(state.flowIndex) < 0) { state.flowIndex = mainFlowIndex(); state.step = 0; }
-    state.mode = mode; state.hotId = null;
-    render();
-  }
-
-  function openFlow(i) {
-    if (!state.flows[i]) return;
-    stopAutoplay();
-    state.flowIndex = i; state.step = 0; state.mode = 'flow'; state.hotId = null;
-    render();
-  }
-
-  /* ---------------- 흐름 조작 ---------------- */
-  // 흐름 선택 목록: 기본 흐름 + 지금 펼친 위치와 관련된 상세 흐름만
-  function syncFlowSelect() {
-    var sel = $('flow-select'), vis = visibleFlows();
-    if (vis.indexOf(state.flowIndex) < 0) vis.push(state.flowIndex);
-    sel.textContent = '';
-    vis.forEach(function (i) {
-      var f = state.flows[i];
-      sel.appendChild(el('option', { value: i, text: (f.main ? '기본 흐름 · ' : '상세 · ') + f.title + ' (' + f.steps.length + '단계)' }));
-    });
-    sel.value = String(state.flowIndex);
-    $('flow-select-wrap').hidden = vis.length < 2;
-  }
-
-  function renderFlowSelect() {
-    var sel = $('flow-select');
-    sel.addEventListener('change', function () { stopAutoplay(); state.flowIndex = +sel.value || 0; state.step = 0; render(); });
-  }
-
-  function goStep(i) {
-    var f = currentFlow();
-    if (!f) return;
-    state.step = Math.max(0, Math.min(f.steps.length - 1, i));
-    var st = $('stage'), h0 = st.clientHeight;
-    applyFlowState();
-    updateCaption();
-    if (st.clientHeight !== h0) render(); // 설명 줄 수가 바뀌어 무대 높이가 달라지면 바로 다시 배치(라벨이 잠깐 무대 밖에 걸치는 것 방지)
-  }
-
-  function startAutoplay() {
-    var f = currentFlow();
-    if (!f) return;
-    if (state.step >= f.steps.length - 1) goStep(0);
-    $('step-play').setAttribute('aria-pressed', 'true');
-    $('step-play').textContent = '⏸ 일시 정지';
-    state.timer = setInterval(function () {
-      var fl = currentFlow();
-      if (!fl || state.step >= fl.steps.length - 1) { stopAutoplay(); return; }
-      goStep(state.step + 1);
-    }, AUTOPLAY_MS);
-  }
-
-  function stopAutoplay() {
-    if (state.timer) clearInterval(state.timer);
-    state.timer = null;
-    $('step-play').setAttribute('aria-pressed', 'false');
-    $('step-play').textContent = '▶ 자동 재생';
-  }
-
-  /* ---------------- 서랍(구조·용어·출처) ---------------- */
-  var PANE_TITLES = { outline: '구조 전체 보기', terms: '용어', sources: '출처' };
-
-  function openDrawer(pane, opener) {
-    stopAutoplay();
-    if (tour.i >= 0) endTour(true);
-    hideTip();
-    state.drawerOpener = opener || document.activeElement;
-    $('drawer-title').textContent = PANE_TITLES[pane] || '';
-    each('#drawer .pane', function (p) { p.hidden = p.getAttribute('data-pane') !== pane; });
-    $('drawer').hidden = false;
-    $('drawer-backdrop').hidden = false;
-    document.body.classList.add('drawer-open');
-    if (pane === 'outline') updateOutline(true);
-    var first = pane === 'terms' ? $('term-search') : $('drawer-close');
-    first.focus();
-  }
-
-  function closeDrawer() {
-    if ($('drawer').hidden) return;
-    $('drawer').hidden = true;
-    $('drawer-backdrop').hidden = true;
-    document.body.classList.remove('drawer-open');
-    var o = state.drawerOpener;
-    state.drawerOpener = null;
-    if (o && document.contains(o) && o.focus) o.focus();
-  }
-
-  function trapFocus(e) {
-    var list = Array.prototype.filter.call($('drawer').querySelectorAll('button, a[href], input, select'), function (n) {
-      return !n.disabled && n.offsetParent !== null;
-    });
-    if (!list.length) return;
-    var first = list[0], last = list[list.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-  }
 
   function buildOutline() {
     var root = $('outline');
@@ -1292,21 +485,6 @@
     o.toggle.textContent = open ? '▾' : '▸';
   }
 
-  function updateOutline(reveal) {
-    state.order.forEach(function (id) {
-      var o = state.nodes[id].ol;
-      if (!o) return;
-      var viewing = state.mode === 'explore' && id === state.viewId, sel = state.mode === 'explore' && id === state.selId;
-      o.badge.textContent = viewing ? '보는 중' : sel ? '선택됨' : '';
-      o.li.classList.toggle('is-current', viewing || sel);
-    });
-    if (reveal) {
-      [state.viewId, state.selId].forEach(function (id) {
-        if (!id || !state.nodes[id]) return;
-        pathTo(id).forEach(function (p) { if (p !== id || state.nodes[p].childIds.length) setOutlineOpen(p, true); });
-      });
-    }
-  }
 
   function termRow(t) {
     var nodeBtns = t.nodes.map(function (id) { return el('button', { type: 'button', class: 'term-chip', 'data-go': id, text: '◇ ' + state.nodes[id].data.label }); });
@@ -1386,21 +564,6 @@
     $('checked-note').textContent = '모든 설명은 위 공식 문서를 근거로 작성했습니다.' + (isStr(data.meta && data.meta.checked) ? ' 내용 기준일: ' + data.meta.checked + '.' : '');
   }
 
-  /* ---------------- 헤더·경고 ---------------- */
-  function renderHeader(meta) {
-    meta = meta || {};
-    state.meta = meta;
-    state.guide = null;
-    GUIDES.forEach(function (g) { if (g.id === meta.id) state.guide = g; });
-    var title = isStr(meta.title) ? meta.title : '학습 가이드';
-    $('guide-title').textContent = title;
-    document.title = title + ' · 인프라 학습 가이드';
-    var nav = $('guide-nav');
-    nav.textContent = '';
-    GUIDES.forEach(function (g) {
-      nav.appendChild(el('a', { class: 'guide-link', href: g.href, 'aria-current': g.id === meta.id ? 'page' : null, text: g.label }));
-    });
-  }
 
   function renderWarnings() {
     var box = $('data-notice');
@@ -1412,276 +575,1126 @@
     warnings.forEach(function (w) { ul.appendChild(el('li', { text: w })); });
   }
 
-  /* ---------------- 첫 화면 소개(핵심 한 줄) ---------------- */
-  var RELATION = [
-    { id: 'docker', pre: 'Docker로', text: '상자를 만들고' },
-    { id: 'cicd', pre: 'CI/CD로', text: '자동으로 만들어' },
-    { id: 'k8s', pre: 'Kubernetes로', text: '운영하고' },
-    { id: 'monitoring', pre: 'Monitoring으로', text: '지켜본다' }
-  ];
-  function heroKey() { return 'guide.hero.' + (state.meta.id || 'page'); }
-  function tourKey() { return 'guide.tour.' + (state.meta.id || 'page'); }
 
-  function renderHero() {
-    var m = state.meta || {};
-    var key = isStr(m.keyPoint) ? m.keyPoint : (isStr(m.subtitle) ? m.subtitle : '');
-    $('hero-eyebrow').textContent = isStr(m.eyebrow) ? m.eyebrow : '';
-    var hk = $('hero-key');
-    hk.textContent = '';
-    hk.appendChild(richText(key));
-    var learn = Array.isArray(m.learn) ? m.learn.filter(isStr).slice(0, 3) : [];
-    var ul = $('hero-learn');
-    ul.textContent = '';
-    learn.forEach(function (line) { ul.appendChild(el('li', null, [richText(line)])); });
-    $('hero-learn-wrap').hidden = !learn.length;
-    var rel = $('relation');
-    rel.textContent = '';
-    RELATION.forEach(function (r) {
-      var g = null;
-      GUIDES.forEach(function (x) { if (x.id === r.id) g = x; });
-      if (!g) return;
-      var cur = r.id === m.id;
-      rel.appendChild(el('li', { class: cur ? 'is-current' : '' }, [
-        cur ? el('span', { class: 'rel-link', 'aria-current': 'page' }, [el('strong', { text: r.pre }), ' ' + r.text])
-          : el('a', { class: 'rel-link', href: g.href }, [el('strong', { text: r.pre }), ' ' + r.text])
-      ]));
-    });
-    setHeroCompact(store(heroKey()) === 'compact');
+
+  /* ---------------- 공통 보조 ---------------- */
+  function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
+  function pathTo(id) { var p = []; while (id && state.nodes[id]) { p.unshift(id); id = state.nodes[id].parentId; } return p; }
+  function nd(id) { return state.nodes[id] && state.nodes[id].data; }
+  function enOf(id) { var d = nd(id); return (d.en || d.label).toUpperCase(); }
+  function keyOf(id) { var d = nd(id); return d.key || d.desc; }
+  function kidsOf(id) { return id ? state.nodes[id].childIds : state.rootIds; }
+  function siblingsOf(id) { var p = state.nodes[id].parentId; return p ? state.nodes[p].childIds : state.rootIds; }
+  var reduced = false;
+  function motionOff() { return reduced; }
+  function later(fn, ms) { if (motionOff()) fn(); else setTimeout(fn, ms); }
+
+  /* ---------------- 등각 도구 ----------------
+     2:1 등각 투영. (sx, sy) = 바닥 중심의 화면 좌표, (x, y, z) = 그 점에서의 등각 좌표. */
+  function isoP(sx, sy, x, y, z) { return [sx + x - y, sy + (x + y) / 2 - (z || 0)]; }
+  function ptsStr(list) { return list.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '); }
+  function polyEl(parent, list, cls) { var p = svg('polygon', { points: ptsStr(list), class: cls }); parent.appendChild(p); return p; }
+  function topMatrix(sx, sy, z) { return 'matrix(1 .5 -1 .5 ' + sx.toFixed(1) + ' ' + (sy - (z || 0)).toFixed(1) + ')'; }
+
+  // 장면을 그리는 도구 모음. scene.js(GUIDE_SCENE.draw)와 엔진의 일반 장면이 같은 도구를 쓴다.
+  function makeKit(layer) {
+    var K = { parts: {}, subs: {}, labels: [], nb: {}, layer: layer, P: isoP };
+    K.has = function (id) { return !!state.nodes[id]; };
+    K.g = function (parent, cls) { var g = svg('g', { class: cls || '' }); (parent || layer).appendChild(g); return g; };
+    // 누를 수 있는 부분(노드 하나). 데이터에 없는 노드면 화면에 붙이지 않은 빈 그룹을 돌려준다.
+    K.part = function (id, cls) {
+      var g = svg('g', { class: 'part' + (cls ? ' ' + cls : ''), 'data-id': id });
+      if (!state.nodes[id]) { warn('장면(scene.js): 노드 "' + id + '"가 데이터에 없어 그리지 않았습니다.'); return g; }
+      layer.appendChild(g);
+      K.parts[id] = g;
+      return g;
+    };
+    // 부분 안의 더 깊은 노드(흐름 단계에서 이 조각만 빛나게 할 때 사용)
+    K.sub = function (parent, id) {
+      var g = svg('g', { class: 'sub', 'data-sub': id });
+      parent.appendChild(g);
+      if (state.nodes[id]) K.subs[id] = g;
+      return g;
+    };
+    K.box = function (parent, sx, sy, w, d, h, cls, z0) {
+      z0 = z0 || 0;
+      var a = w / 2, b = d / 2, z1 = z0 + h;
+      var g = svg('g', { class: 'bx' + (cls ? ' ' + cls : '') });
+      var A = isoP(sx, sy, -a, -b, z1), B = isoP(sx, sy, a, -b, z1), C = isoP(sx, sy, a, b, z1), D = isoP(sx, sy, -a, b, z1);
+      if (h > 0) {
+        polyEl(g, [D, C, isoP(sx, sy, a, b, z0), isoP(sx, sy, -a, b, z0)], 'fa');
+        polyEl(g, [C, B, isoP(sx, sy, a, -b, z0), isoP(sx, sy, a, b, z0)], 'fb');
+      }
+      polyEl(g, [A, B, C, D], 'ft');
+      parent.appendChild(g);
+      return { g: g, top: [sx, sy - z1], z: z1, left: D, right: B, back: A, front: C };
+    };
+    K.cyl = function (parent, sx, sy, r, h, cls, z0) {
+      z0 = z0 || 0;
+      var y0 = sy - z0, y1 = y0 - h, ry = r / 2;
+      var g = svg('g', { class: 'bx cy' + (cls ? ' ' + cls : '') });
+      g.appendChild(svg('path', { class: 'fa', d: 'M' + (sx - r) + ' ' + y1 + 'L' + (sx - r) + ' ' + y0 + 'A' + r + ' ' + ry + ' 0 0 0 ' + (sx + r) + ' ' + y0 + 'L' + (sx + r) + ' ' + y1 + 'Z' }));
+      g.appendChild(svg('ellipse', { class: 'ft', cx: sx, cy: y1, rx: r, ry: ry }));
+      parent.appendChild(g);
+      return { g: g, top: [sx, y1], z: z0 + h };
+    };
+    // 윗면에 눕힌 아이콘·글자
+    K.topIcon = function (parent, name, sx, sy, z, size) {
+      var g = svg('g', { class: 'top-ico', transform: topMatrix(sx, sy, z) });
+      drawIcon(g, name, 0, 0, size, 'ico');
+      parent.appendChild(g);
+      return g;
+    };
+    K.topText = function (parent, text, sx, sy, z, size, cls) {
+      var g = svg('g', { transform: topMatrix(sx, sy, z) });
+      var t = svg('text', { class: 'top-tx' + (cls ? ' ' + cls : ''), x: 0, y: 0, 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': size || 12 });
+      t.textContent = text;
+      g.appendChild(t);
+      parent.appendChild(g);
+      return g;
+    };
+    // 세워 둔 아이콘(떠 있는 물체용)
+    K.icon = function (parent, name, cx, cy, size) { return drawIcon(parent, name, cx, cy, size, 'ico'); };
+    K.text = function (parent, text, x, y, size, cls, anchor) {
+      var t = svg('text', { class: 'sc-tx' + (cls ? ' ' + cls : ''), x: x, y: y, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', 'font-size': size || 11 });
+      t.textContent = text;
+      parent.appendChild(t);
+      return t;
+    };
+    K.el = function (parent, tag, attrs) { var n = svg(tag, attrs); (parent || layer).appendChild(n); return n; };
+    K.dot = function (parent, x, y, r, cls) { return K.el(parent, 'circle', { cx: x.toFixed(1), cy: y.toFixed(1), r: r, class: cls || 'dot-c' }); };
+    K.iconOf = function (id) { return iconOf(id); };
+    K.link = function (parent, points, cls) {
+      var p = svg('polyline', { class: 'link' + (cls ? ' ' + cls : ''), points: ptsStr(points) });
+      (parent || layer).appendChild(p);
+      return p;
+    };
+    // 라벨: anchor(부분 위의 점)에서 at(라벨 자리)까지 지시선. side 'l' | 'r'
+    K.label = function (id, anchor, at, side) {
+      if (!state.nodes[id]) return;
+      K.labels.push({ id: id, anchor: anchor, at: at, side: side || (at[0] < anchor[0] ? 'l' : 'r') });
+    };
+    return K;
   }
 
-  function setHeroCompact(on) {
-    $('hero').classList.toggle('is-compact', on);
-    document.body.classList.toggle('hero-open', !on);
-    $('hero-toggle').hidden = !on;
-    $('hero-toggle').setAttribute('aria-expanded', on ? 'false' : 'true');
-    if (state.forceRender) state.forceRender();
-  }
+  /* ---------------- 장면: 일반(안으로 들어간 화면) ----------------
+     부모 판 위에 하위 요소를 블록으로 놓고, 가장자리에 같은 단계의 이웃(형제)을 작은 판으로 둔다. */
+  function drawGeneric(K, vid) {
+    var items = kidsOf(vid), n = items.length;
+    var cols = n <= 3 ? Math.max(1, n) : n === 4 ? 2 : 3, rows = Math.ceil(n / cols);
+    var cell = 128, blk = 80, pad = 30, slabH = 22;
+    var W = cols * cell + pad * 2, D = rows * cell + pad * 2;
+    var CX = 500, CY = 352 - Math.max(0, (rows - 2)) * 20;
 
-  /* ---------------- 첫 방문 둘러보기(3~5단계, 건너뛰기 가능) ---------------- */
-  var tour = { i: -1, steps: [], opener: null };
-  function tourSteps() {
-    var n = itemsOf(baseView()).length;
-    return [
-      { sel: '#hero', title: '이 페이지의 핵심 한 줄', text: '맨 위 한 줄이 이 페이지가 무엇인지입니다. [여기서 시작]을 누르면 소개가 접히고 바로 탐색을 시작합니다.' },
-      { sel: '#stage', title: '먼저 핵심 ' + n + '개만', text: '처음에는 핵심 구성요소(L1)만 보입니다' + (chainRoots() ? '. 화살표는 기본 흐름 순서입니다' : '') + '. 블록을 한 번 누르면 설명, 한 번 더 누르면 그 안(L2)으로 들어갑니다.' },
-      { sel: '#caption', title: '설명은 짧게, 자세한 건 접어서', text: '선택한 블록이 무엇이고 왜 필요한지, 누구에게 받아서 누구에게 넘기는지 보여 줍니다. 점선 밑줄 용어는 올리거나 누르면 뜻이 나오고, 더 알고 싶으면 [자세히 보기]를 펼치세요.' },
-      { sel: '#crumbs', title: '지금 위치와 되돌아가기', text: '안으로 들어갈수록 "페이지 › 영역 › 항목"처럼 경로가 쌓입니다. 앞 항목을 누르거나 Esc를 누르면 한 단계 위로 돌아갑니다.' },
-      { sel: '.tb-actions', title: '필요할 때 쓰는 도구', text: '⇢ 흐름은 단계별 재생, Aa 용어는 용어 사전(L1 먼저), ☰ 구조는 전체 목차, § 출처는 공식 문서 목록입니다. ? 둘러보기로 이 안내를 다시 볼 수 있습니다.' }
-    ];
-  }
-
-  function startTour() {
-    if (!$('tour')) return;
-    closeDrawer(); hideTip();
-    tour.steps = tourSteps();
-    tour.opener = document.activeElement;
-    showTourStep(0);
-  }
-
-  function showTourStep(i) {
-    tour.i = i;
-    each('.tour-target', function (n) { n.classList.remove('tour-target'); });
-    var st = tour.steps[i], t = document.querySelector(st.sel);
-    $('tour').hidden = false;
-    $('tour-count').textContent = (i + 1) + ' / ' + tour.steps.length;
-    $('tour-title').textContent = st.title;
-    $('tour-text').textContent = st.text;
-    $('tour-prev').disabled = i === 0;
-    $('tour-next').textContent = i === tour.steps.length - 1 ? '완료' : '다음 ›';
-    if (t) {
-      t.classList.add('tour-target');
-      if (t.scrollIntoView) t.scrollIntoView({ block: 'nearest' });
+    // 이웃(형제) — 화면 네 모서리(필요하면 좌우 가운데)에 작은 판
+    if (vid) {
+      var spots = [[118, 132], [882, 132], [118, 548], [882, 548], [70, 340], [930, 340]];
+      siblingsOf(vid).filter(function (s) { return s !== vid; }).slice(0, spots.length).forEach(function (sid, i) {
+        var sp = spots[i], g = K.part(sid, 'nb');
+        var b = K.box(g, sp[0], sp[1], 54, 54, 14, 'nb-bx');
+        K.topIcon(g, iconOf(sid), sp[0], sp[1], b.z, 30);
+        K.nb[sid] = true;
+        K.label(sid, [sp[0], sp[1] + 30], [sp[0], sp[1] + 46], 'c');
+      });
     }
-    positionTour();
-    $('tour-next').focus({ preventScroll: true });
+
+    var slabG = vid ? K.part(vid, 'slab') : K.g(null, 'slab-deco');
+    var slab = K.box(slabG, CX, CY, W, D, slabH, 'slab-bx');
+    var tp = isoP(CX, CY, 0, D / 2 - 15, 0);
+    if (vid) K.topText(slabG, enOf(vid), tp[0], tp[1], slabH, 13, 'slab-tx');
+    else K.topText(slabG, (state.guide ? state.guide.en : ''), tp[0], tp[1], slabH, 13, 'slab-tx');
+    var cells = items.map(function (id, i) {
+      var r = Math.floor(i / cols), c = i % cols;
+      var inRow = Math.min(cols, n - r * cols);
+      var x = -W / 2 + pad + cell / 2 + c * cell + (cols - inRow) * cell / 2;
+      var y = -D / 2 + pad + cell / 2 + r * cell;
+      return { id: id, x: x, y: y };
+    }).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
+    cells.forEach(function (c) {
+      var base = isoP(CX, CY, c.x, c.y, slabH), deep = state.nodes[c.id].childIds.length > 0;
+      var g = K.part(c.id, 'blk');
+      var b;
+      if (deep) {
+        K.box(g, base[0], base[1], blk + 14, blk + 14, 8, 'blk-base');
+        b = K.box(g, base[0], base[1] - 8, blk, blk, 40, 'blk-bx');
+      } else b = K.box(g, base[0], base[1], blk, blk, 28, 'blk-bx');
+      K.topIcon(g, iconOf(c.id), b.top[0], b.top[1], 0, blk * 0.56);
+      var side = base[0] < CX - 4 ? 'l' : base[0] > CX + 4 ? 'r' : (c.y > 0 ? 'l' : 'r');
+      var lx = side === 'l' ? Math.min(base[0] - 70, CX - W / 2 - D / 2 + 60) : Math.max(base[0] + 70, CX + W / 2 + D / 2 - 60);
+      K.label(c.id, [b.top[0], b.top[1]], [lx, b.top[1] - 26], side);
+    });
+    return { viewBox: [1000, 640] };
   }
 
-  function positionTour() {
-    if (tour.i < 0) return;
-    var box = $('tour'), t = document.querySelector(tour.steps[tour.i].sel);
-    var vw = document.documentElement.clientWidth, vh = window.innerHeight;
-    if (vw < 768 || !t) { box.classList.add('tour-sheet'); box.style.left = ''; box.style.top = ''; return; }
-    box.classList.remove('tour-sheet');
-    var r = t.getBoundingClientRect(), w = box.offsetWidth, h = box.offsetHeight;
-    var x = Math.max(12, Math.min(vw - 12 - w, r.left + r.width / 2 - w / 2));
-    var y = r.bottom + 12;
-    if (y + h > vh - 8) y = r.top - h - 12;
-    if (y < 8) y = Math.max(8, Math.min(vh - h - 8, r.top + 16));
-    box.style.left = x + 'px'; box.style.top = y + 'px';
+  /* ---------------- 장면 그리기 ---------------- */
+  function boardDefs(board) {
+    var d = svg('defs', {});
+    var f = svg('filter', { id: 'glow', x: '-50%', y: '-50%', width: '200%', height: '200%' });
+    f.appendChild(svg('feGaussianBlur', { stdDeviation: '5', result: 'b' }));
+    var m = svg('feMerge', {});
+    m.appendChild(svg('feMergeNode', { in: 'b' }));
+    m.appendChild(svg('feMergeNode', { in: 'SourceGraphic' }));
+    f.appendChild(m);
+    d.appendChild(f);
+    board.appendChild(d);
   }
 
-  function endTour(silent) {
-    if (tour.i < 0) return;
-    tour.i = -1;
-    store(tourKey(), 'done');
-    $('tour').hidden = true;
-    each('.tour-target', function (n) { n.classList.remove('tour-target'); });
-    if (silent) return;
-    var o = tour.opener;
-    if (o && o !== document.body && document.contains(o) && o.focus) o.focus();
-    else { var f = $('stage-labels').querySelector('.lbl'); if (f) f.focus(); }
+  function renderView() {
+    var board = $('board');
+    board.textContent = '';
+    boardDefs(board);
+    var layer = svg('g', { class: 'scene' });
+    board.appendChild(layer);
+    var K = makeKit(layer), res = null;
+    var custom = !state.viewId && window.GUIDE_SCENE && typeof window.GUIDE_SCENE.draw === 'function';
+    if (custom) {
+      res = safe('장면(scene.js)', function () { return window.GUIDE_SCENE.draw(K); });
+      if (!res || !Object.keys(K.parts).length) {
+        layer.textContent = ''; K = makeKit(layer); custom = false;
+      }
+    }
+    if (!custom) res = drawGeneric(K, state.viewId);
+    state.vb = res && res.viewBox ? res.viewBox : [1000, 640];
+    board.setAttribute('viewBox', '0 0 ' + state.vb[0] + ' ' + state.vb[1]);
+    // 흐름 경로(빛나는 선 + 점)는 가장 위에
+    var trail = svg('g', { class: 'tour-trail' });
+    trail.appendChild(svg('path', { class: 'journey__path', d: '' }));
+    trail.appendChild(svg('circle', { class: 'journey__dot', r: 5, cx: -20, cy: -20 }));
+    board.appendChild(trail);
+    state.kit = K;
+    // 라벨이 빠진 부분은 자동으로 붙인다
+    Object.keys(K.parts).forEach(function (id) {
+      if (K.labels.some(function (l) { return l.id === id; })) return;
+      var bb = K.parts[id].getBBox();
+      K.labels.push({ id: id, anchor: [bb.x + bb.width / 2, bb.y + 4], at: [bb.x + bb.width + 30, bb.y - 10], side: 'r' });
+    });
+    $('stage').classList.toggle('is-root', !state.viewId);
+    buildLabels();
+    sizeBoard();
+    updateTop();
+    updateCap();
+    applyFlow(false);
+    applyPractice();
+  }
+
+  // 장면 폭: 넓은 화면은 높이·폭 둘 다에 맞추고, 좁은 화면은 폭에 맞춘다.
+  function sizeBoard() {
+    var stage = $('stage'), wrap = $('board-wrap');
+    var r = stage.getBoundingClientRect();
+    var availW = Math.max(240, r.width - 32), w = availW;
+    if (window.innerWidth >= WIDE) {
+      var availH = Math.max(260, r.height - 96);
+      w = Math.min(availW, availH * state.vb[0] / state.vb[1]);
+    }
+    wrap.style.width = Math.floor(w) + 'px';
+    wrap.style.height = Math.floor(w * state.vb[1] / state.vb[0]) + 'px';
+    layoutLabels();
+  }
+
+  /* ---------------- 라벨(HTML) ----------------
+     글자 크기를 화면 폭과 상관없이 유지하려고 장면 위에 HTML 버튼으로 얹고, 지시선은 겹친 SVG에 px로 그린다. */
+  function buildLabels() {
+    var box = $('labels'), legend = $('legend');
+    box.textContent = ''; legend.textContent = '';
+    var lead = svg('svg', { class: 'leaders', 'aria-hidden': 'true', focusable: 'false' });
+    box.appendChild(lead);
+    state.labels = state.kit.labels.map(function (L, i) {
+      var d = nd(L.id), nb = !!state.kit.nb[L.id], deep = state.nodes[L.id].childIds.length > 0;
+      var tipText = nb ? '이웃: ' + d.label + (deep ? ' (눌러서 이동)' : '') : d.label;
+      var btn = el('button', {
+        type: 'button', class: 'lbl lbl-' + L.side + (nb ? ' lbl-nb' : ''), 'data-id': L.id,
+        'aria-label': (i + 1) + '. ' + tipText + (d.en ? ' (' + d.en + ')' : '') + ' — ' + actionText(L.id)
+      }, [
+        el('span', { class: 'lbl-n', 'aria-hidden': 'true', text: String(i + 1) }),
+        el('span', { class: 'lbl-txt' }, [
+          d.en ? el('span', { class: 'lbl-en', text: d.en.toUpperCase() }) : null,
+          el('span', { class: 'lbl-ko', text: d.label })
+        ])
+      ]);
+      box.appendChild(btn);
+      var line = svg('polyline', { class: 'leader' + (nb ? ' leader-nb' : ''), 'data-id': L.id });
+      var dot = svg('circle', { class: 'leader-dot', r: 2.5, 'data-id': L.id });
+      lead.appendChild(line); lead.appendChild(dot);
+      legend.appendChild(el('li', null, [el('button', { type: 'button', class: 'lg-btn' + (nb ? ' lbl-nb' : ''), 'data-id': L.id }, [
+        el('span', { class: 'lbl-n', text: String(i + 1) }),
+        el('span', { class: 'lbl-txt' }, [d.en ? el('span', { class: 'lbl-en', text: d.en.toUpperCase() }) : null, el('span', { class: 'lbl-ko', text: d.label })]),
+        el('span', { class: 'lg-act', text: actionText(L.id) })
+      ])]));
+      return { L: L, btn: btn, line: line, dot: dot };
+    });
+  }
+
+  function actionText(id) {
+    if (isDrillTarget(id)) return state.nodes[id].childIds.length ? '안으로 들어가기' : '자세히 보기';
+    return '자세히 보기';
+  }
+  function isDrillTarget(id) {
+    var K = state.kit;
+    return !!(K && (K.nb[id] || (!state.viewId && state.rootIds.indexOf(id) >= 0)));
+  }
+
+  function layoutLabels() {
+    var wrap = $('board-wrap'), box = $('labels');
+    if (!state.labels.length) { $('legend').hidden = true; return; }
+    var W = wrap.clientWidth, H = wrap.clientHeight, s = W / state.vb[0];
+    var compact = W < COMPACT;
+    box.classList.toggle('is-compact', compact);
+    $('legend').hidden = !compact;
+    var lead = box.querySelector('.leaders');
+    lead.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    lead.setAttribute('width', W); lead.setAttribute('height', H);
+    // 1) 원하는 자리 계산
+    var items = state.labels.map(function (o) {
+      var a = [o.L.anchor[0] * s, o.L.anchor[1] * s], t = [o.L.at[0] * s, o.L.at[1] * s];
+      o.btn.style.left = '0px'; o.btn.style.top = '0px';
+      return { o: o, a: a, x: t[0], y: t[1], h: compact ? 22 : o.btn.offsetHeight || 34, w: o.btn.offsetWidth || 90 };
+    });
+    if (compact) {
+      // 번호만: 부분 위에 바로 놓는다
+      items.forEach(function (it) {
+        it.o.btn.style.left = it.a[0] + 'px'; it.o.btn.style.top = it.a[1] + 'px';
+        it.o.btn.tabIndex = -1; it.o.btn.setAttribute('aria-hidden', 'true');
+        it.o.line.setAttribute('points', ''); it.o.dot.setAttribute('r', 0);
+      });
+      return;
+    }
+    // 2) 같은 쪽 라벨끼리 세로로 겹치지 않게 민다(위→아래, 넘치면 아래→위)
+    ['l', 'r', 'c'].forEach(function (side) {
+      var col = items.filter(function (it) { return it.o.L.side === side; }).sort(function (a, b) { return a.y - b.y; });
+      if (side === 'c') return;
+      var gap = 6;
+      for (var i = 1; i < col.length; i++) {
+        var p = col[i - 1];
+        if (Math.abs(col[i].x - p.x) < 200 && col[i].y - p.y < (p.h + col[i].h) / 2 + gap) col[i].y = p.y + (p.h + col[i].h) / 2 + gap;
+      }
+      for (var j = col.length - 1; j >= 0; j--) {
+        var maxY = j === col.length - 1 ? H - col[j].h / 2 - 2 : col[j + 1].y - (col[j + 1].h + col[j].h) / 2 - gap;
+        if (col[j].y > maxY) col[j].y = maxY;
+        if (col[j].y < col[j].h / 2 + 2) col[j].y = col[j].h / 2 + 2;
+      }
+    });
+    items.forEach(function (it) {
+      var o = it.o, side = o.L.side, x = Math.max(4, Math.min(W - 4, it.x));
+      o.btn.tabIndex = 0; o.btn.removeAttribute('aria-hidden');
+      o.btn.style.left = x + 'px'; o.btn.style.top = it.y + 'px';
+      // 라벨이 화면 밖으로 나가지 않게
+      var tail = side === 'l' ? x - 6 : side === 'r' ? x + 6 : x;
+      var pts = side === 'c' ? [it.a, [x, it.y - it.h / 2]] : [it.a, [x, it.y], [tail, it.y]];
+      o.line.setAttribute('points', ptsStr(pts));
+      o.dot.setAttribute('cx', it.a[0].toFixed(1)); o.dot.setAttribute('cy', it.a[1].toFixed(1)); o.dot.setAttribute('r', 2.5);
+    });
+    // 좁은 쪽 경계 보정: 라벨이 래퍼 밖으로 나가면 안쪽으로 당긴다
+    items.forEach(function (it) {
+      var b = it.o.btn, r = b.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dx = 0;
+      var tp = $('tours').getBoundingClientRect(), wide = window.innerWidth >= WIDE;
+      var lo = Math.max(wr.left - 12, 16), hi = Math.min(wr.right + 12, (wide ? tp.left : window.innerWidth) - 16);
+      if (r.left < lo) dx = lo - r.left;
+      if (r.right > hi) dx = hi - r.right;
+      if (dx) b.style.left = (parseFloat(b.style.left) + dx) + 'px';
+    });
+  }
+
+  /* ---------------- 강조·선택 ---------------- */
+  function partEls(id) {
+    var K = state.kit, out = [];
+    if (!K) return out;
+    if (K.parts[id]) out.push(K.parts[id]);
+    if (K.subs[id]) out.push(K.subs[id]);
+    return out;
+  }
+  function setHot(id) {
+    if (state.hotId === id) return;
+    state.hotId = id;
+    each('#board .is-hover', function (n) { n.classList.remove('is-hover'); });
+    each('#labels .is-hover, #legend .is-hover', function (n) { n.classList.remove('is-hover'); });
+    if (id) {
+      partEls(id).forEach(function (n) { n.classList.add('is-hover'); });
+      each('#labels [data-id="' + id + '"], #legend [data-id="' + id + '"]', function (n) { n.classList.add('is-hover'); });
+    }
+    updateHint();
+  }
+  function updateHint() {
+    var h = $('hint'), id = state.hotId;
+    if (id && state.nodes[id]) {
+      h.textContent = '';
+      h.appendChild(el('b', { text: nd(id).label }));
+      h.appendChild(document.createTextNode(' — ' + keyOf(id)));
+      h.classList.add('is-key');
+      return;
+    }
+    h.classList.remove('is-key');
+    h.textContent = state.flow >= 0 ? '오른쪽 패널에서 단계를 넘기며 따라가 보세요'
+      : !state.viewId && window.GUIDE_SCENE ? '영역에 포인터를 올리면 핵심 한 줄 · 누르면 안으로 들어갑니다'
+        : '구성 요소를 눌러 자세히 보기';
+  }
+
+  function activate(id, opener) {
+    if (!state.nodes[id]) return;
+    if (isDrillTarget(id) && state.nodes[id].childIds.length) { setView(id); return; }
+    openModal(id, 0, opener);
+  }
+
+  /* ---------------- 이동(들어가기·나오기) ---------------- */
+  function setView(id, focusId) {
+    if (id && !state.nodes[id]) id = null;
+    if (id && !state.nodes[id].childIds.length) id = state.nodes[id].parentId;
+    if (id === state.viewId) { updateTop(); return; }
+    var stage = $('stage'), prev = state.viewId;
+    stage.classList.add('is-diving');
+    hideTip();
+    later(function () {
+      state.viewId = id;
+      state.hotId = null;
+      renderView();
+      updateOutline();
+      saveHash();
+      stage.classList.remove('is-diving');
+      var f = focusId || prev;
+      var lb = f && document.querySelector('#labels .lbl[data-id="' + f + '"]:not([aria-hidden])');
+      if (lb && document.activeElement && document.activeElement !== document.body) lb.focus();
+      updateHint();
+    }, 260);
+  }
+  function up() { if (state.viewId) setView(state.nodes[state.viewId].parentId, state.viewId); }
+
+  // 지금 보는 위치를 주소 뒤(#)에 남겨 새로고침해도 유지. file:// 등에서 막히면 무시한다.
+  function saveHash() {
+    try {
+      var h = state.viewId ? '#' + state.viewId : '';
+      if (window.history && history.replaceState) history.replaceState(null, '', location.pathname + location.search + h);
+    } catch (e) { /* 무시 */ }
+  }
+
+  /* ---------------- 위쪽 머리말 ---------------- */
+  function updateTop() {
+    var back = $('back'), crumb = $('crumb'), vid = state.viewId;
+    if (vid) {
+      var pid = state.nodes[vid].parentId;
+      back.setAttribute('href', '#' + (pid || ''));
+      back.setAttribute('data-up', '1');
+      $('back-text').textContent = pid ? nd(pid).label : (state.guide ? state.guide.label : '처음');
+    } else {
+      back.setAttribute('href', HUB);
+      back.removeAttribute('data-up');
+      $('back-text').textContent = '전체 지도';
+    }
+    crumb.textContent = '';
+    var parts = [el('a', { href: HUB, class: 'cr-link', text: 'INFRA KNOWLEDGE BASE' })];
+    var g = state.guide ? state.guide.en : (state.meta.title || 'GUIDE');
+    parts.push(vid ? el('button', { type: 'button', class: 'cr-link', 'data-view': '', text: g }) : el('b', { 'aria-current': 'page', text: g }));
+    if (vid) pathTo(vid).forEach(function (p, i, arr) {
+      var t = enOf(p);
+      parts.push(i === arr.length - 1 ? el('b', { 'aria-current': 'page', text: t }) : el('button', { type: 'button', class: 'cr-link', 'data-view': p, text: t }));
+    });
+    parts.forEach(function (p, i) { if (i) crumb.appendChild(el('i', { 'aria-hidden': 'true', text: '/' })); crumb.appendChild(p); });
+    var title = (state.meta.title || '학습 가이드') + (vid ? ' — ' + nd(vid).label : '');
+    $('page-title').textContent = title;
+    document.title = title + ' · 인프라 학습 가이드';
+  }
+
+  // 안으로 들어간 화면의 왼쪽 아래 설명(이 판이 무엇인지 1줄)
+  function updateCap() {
+    var cap = $('view-cap'), vid = state.viewId;
+    cap.textContent = '';
+    if (!vid) { cap.hidden = true; return; }
+    cap.hidden = false;
+    var d = nd(vid);
+    cap.appendChild(el('p', { class: 'vc-eyebrow', text: enOf(vid) + ' · L' + Math.min(3, state.nodes[vid].depth) }));
+    cap.appendChild(el('h2', { class: 'vc-title', text: d.label }));
+    cap.appendChild(el('p', { class: 'vc-key' }, [richText(keyOf(vid), {}, selfKeys(vid))]));
+    cap.appendChild(el('button', { type: 'button', class: 'pill vc-more', 'data-modal': vid, text: '자세히 ›' }));
+  }
+
+  /* ---------------- 흐름 패널: 목록 ---------------- */
+  var ARROW_R = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>';
+  var ARROW_L = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+  function svgHtml(html) { var s = el('span', { class: 'ico-wrap' }); s.innerHTML = html; return s; }
+
+  function renderToursList() {
+    var box = $('tours-list'), m = state.meta;
+    box.textContent = '';
+    box.appendChild(el('p', { class: 'tours__eyebrow', text: 'FLOWS · ' + String(m.eyebrow || (state.guide ? state.guide.label : '흐름')) }));
+    box.appendChild(el('h2', { class: 'tours__title', text: m.title || '학습 가이드' }));
+    var lead = isStr(m.keyPoint) ? m.keyPoint : isStr(m.subtitle) ? m.subtitle : '';
+    if (lead) box.appendChild(el('p', { class: 'tours__lead' }, [richText(lead, {})]));
+    if (Array.isArray(m.learn) && m.learn.length) {
+      box.appendChild(el('p', { class: 'tours__label', text: '이 페이지에서 알 수 있는 것' }));
+      box.appendChild(el('ul', { class: 'tours__learn' }, m.learn.filter(isStr).slice(0, 3).map(function (t) { return el('li', { text: t }); })));
+    }
+    if (!state.flows.length) { box.appendChild(el('p', { class: 'tours__lead', text: '표시할 흐름 데이터가 없습니다.' })); return; }
+    // 묶음: 기본 흐름(at 없음) → at 노드별
+    var groups = [{ title: '기본 흐름', list: [] }], byAt = {};
+    state.flows.forEach(function (f, i) {
+      if (!f.at) { groups[0].list.push(i); return; }
+      if (!byAt[f.at]) { byAt[f.at] = { title: nd(f.at).label + ' 안에서', at: f.at, list: [] }; }
+      byAt[f.at].list.push(i);
+    });
+    state.order.forEach(function (id) { if (byAt[id]) groups.push(byAt[id]); });
+    if (!groups[0].list.length) groups.shift();
+    var k = 0;
+    groups.forEach(function (g) {
+      box.appendChild(el('p', { class: 'tours__label', text: g.title }));
+      g.list.forEach(function (fi) {
+        var f = state.flows[fi];
+        var route = el('span', { class: 'ti-route', 'aria-hidden': 'true' }, f.steps.slice(0, 10).map(function () { return el('i'); }));
+        var b = el('button', { type: 'button', class: 'tour-item', 'data-flow': fi, style: '--i:' + (k++) }, [
+          route,
+          el('span', { class: 'ti-txt' }, [el('b', { text: f.title }), f.desc ? el('small', { text: f.desc }) : null]),
+          el('span', { class: 'ti-meta' }, [f.steps.length + '단계', svgHtml(ARROW_R)])
+        ]);
+        box.appendChild(b);
+      });
+    });
+  }
+
+  /* ---------------- 흐름 패널: 진행 ---------------- */
+  function openFlow(i, step) {
+    var f = state.flows[i];
+    if (!f) return;
+    hideTourTip(true);
+    state.flow = i; state.step = step || 0;
+    $('tours').classList.add('is-view');
+    document.body.classList.add('touring');
+    buildFlowView();
+    var target = f.at && state.nodes[f.at].childIds.length ? f.at : null;
+    if (target !== state.viewId) setView(target);
+    later(function () { goStep(state.step, true); }, motionOff() ? 0 : 300);
+    var back = $('tours-view').querySelector('.tours__back');
+    if (back) back.focus();
+  }
+  function closeFlow() {
+    var i = state.flow;
+    state.flow = -1;
+    stopTyping();
+    $('tours').classList.remove('is-view');
+    document.body.classList.remove('touring');
+    applyFlow(false);
+    updateHint();
+    var b = $('tours-list').querySelector('[data-flow="' + i + '"]');
+    if (b) b.focus();
+  }
+
+  function buildFlowView() {
+    var f = state.flows[state.flow], box = $('tours-view');
+    box.textContent = '';
+    var back = el('button', { type: 'button', class: 'tours__back' }, [svgHtml(ARROW_L), '흐름 목록']);
+    back.addEventListener('click', closeFlow);
+    box.appendChild(back);
+    box.appendChild(el('p', { class: 'tours__eyebrow tv-where', id: 'tv-where', text: f.at ? enOf(f.at) : (state.guide ? state.guide.en : 'FLOW') }));
+    box.appendChild(el('h2', { class: 'tours__title tv-title', text: f.title }));
+    var line = el('div', { class: 'tv-line', role: 'group', 'aria-label': '단계로 바로 가기' });
+    f.steps.forEach(function (s, i) {
+      line.appendChild(el('button', { type: 'button', class: 'tv-node', 'data-step': i, 'aria-label': (i + 1) + '단계: ' + nd(s.node).label }, [el('span')]));
+    });
+    box.appendChild(line);
+    box.appendChild(el('div', { class: 'tv-data', id: 'tv-data' }, [
+      el('div', { class: 'tv-data__head' }, [el('span', { class: 'tv-data__label', id: 'tv-data-label' }), el('span', { class: 'tv-data__tag', id: 'tv-data-tag' })]),
+      el('p', { class: 'tv-data__value', id: 'tv-data-value' }),
+      el('p', { class: 'tv-data__sub', id: 'tv-data-sub' })
+    ]));
+    box.appendChild(el('div', { class: 'tv-step' }, [
+      el('span', { class: 'tv-step__n', id: 'tv-n', 'aria-hidden': 'true' }),
+      el('h3', { class: 'tv-step__title', id: 'tv-title' }),
+      el('p', { class: 'tv-step__text', id: 'tv-text' })
+    ]));
+    box.appendChild(el('div', { class: 'tv-src', id: 'tv-src' }));
+    var prev = el('button', { type: 'button', class: 'tv-btn tv-btn--prev', id: 'tv-prev', 'aria-label': '이전 단계' }, [svgHtml(ARROW_L)]);
+    var next = el('button', { type: 'button', class: 'tv-btn tv-btn--next', id: 'tv-next' }, [el('span', { id: 'tv-next-t', text: '다음' }), svgHtml(ARROW_R)]);
+    box.appendChild(el('div', { class: 'tv-nav' }, [prev, el('span', { class: 'tv-count', id: 'tv-count' }), next]));
+    prev.addEventListener('click', function () { goStep(state.step - 1); });
+    next.addEventListener('click', function () {
+      if (state.step >= f.steps.length - 1) closeFlow(); else goStep(state.step + 1);
+    });
+  }
+
+  function goStep(i, first) {
+    var f = state.flows[state.flow];
+    if (!f) return;
+    i = Math.max(0, Math.min(f.steps.length - 1, i));
+    var prevStep = state.step;
+    state.step = i;
+    var s = f.steps[i], d = nd(s.node), last = i === f.steps.length - 1;
+    each('#tours-view .tv-node', function (b, k) {
+      b.classList.toggle('is-done', k < i);
+      b.classList.toggle('is-on', k === i);
+      if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
+      var drawn = drawnFor(f.steps[k].node);
+      b.classList.toggle('is-away', !drawn);
+    });
+    $('tours-view').querySelector('.tv-line').style.setProperty('--p', f.steps.length > 1 ? i / (f.steps.length - 1) : 0);
+    // 위: 지금 다루는 대상
+    var card = $('tv-data');
+    card.classList.remove('is-in'); void card.offsetWidth; card.classList.add('is-in');
+    $('tv-data-label').textContent = '지금 여기';
+    $('tv-data-tag').textContent = 'L' + Math.min(3, state.nodes[s.node].depth) + ' · ' + pad2(i + 1);
+    scramble($('tv-data-value'), d.en ? d.en.toUpperCase() : d.label);
+    var sub = $('tv-data-sub');
+    sub.textContent = '';
+    sub.appendChild(el('b', { text: d.label }));
+    if (d.role) sub.appendChild(document.createTextNode(' · ' + d.role));
+    // 아래: 단계 설명
+    $('tv-n').textContent = pad2(i + 1);
+    $('tv-title').textContent = d.label;
+    typeText($('tv-text'), s.text, selfKeys(s.node));
+    var src = $('tv-src');
+    src.textContent = '';
+    if (s === f.steps[0] || last) { src.appendChild(document.createTextNode('출처: ')); src.appendChild(srcLinks(f.src)); }
+    $('tv-count').innerHTML = '<b>' + pad2(i + 1) + '</b> / ' + pad2(f.steps.length);
+    $('tv-prev').disabled = i === 0;
+    $('tv-next-t').textContent = last ? '마치기' : '다음';
+    $('tv-next').classList.toggle('is-away', last);
+    applyFlow(!first && prevStep !== i ? prevStep : null);
+    updateHint();
+  }
+
+  // 흐름 단계 노드가 지금 장면에서 그려진 곳: 자기 자신 → 가장 가까운 조상
+  function drawnFor(id) {
+    var K = state.kit;
+    if (!K || !state.nodes[id]) return null;
+    var p = pathTo(id);
+    for (var i = p.length - 1; i >= 0; i--) {
+      if (K.subs[p[i]]) return K.subs[p[i]];
+      if (K.parts[p[i]]) return K.parts[p[i]];
+    }
+    return null;
+  }
+  function centerOf(n) {
+    try { var b = n.getBBox(); return [b.x + b.width / 2, b.y + b.height * 0.42]; } catch (e) { return null; }
+  }
+
+  function applyFlow(fromStep) {
+    var board = $('board');
+    each('#board .is-on, #board .is-dim', function (n) { n.classList.remove('is-on'); n.classList.remove('is-dim'); });
+    each('#labels .is-on, #legend .is-on', function (n) { n.classList.remove('is-on'); });
+    var trail = board.querySelector('.tour-trail');
+    var f = state.flows[state.flow];
+    board.classList.toggle('touring', !!f);
+    if (!f) { if (trail) { trail.querySelector('path').setAttribute('d', ''); trail.querySelector('circle').setAttribute('cx', -20); } return; }
+    var s = f.steps[state.step], cur = drawnFor(s.node);
+    var K = state.kit;
+    Object.keys(K.parts).forEach(function (id) { K.parts[id].classList.add('is-dim'); });
+    if (cur) {
+      cur.classList.add('is-on');
+      var part = cur.classList.contains('part') ? cur : cur.parentNode;
+      while (part && part.classList && !part.classList.contains('part')) part = part.parentNode;
+      if (part && part.classList) { part.classList.remove('is-dim'); var pid = part.getAttribute('data-id'); each('#labels [data-id="' + pid + '"], #legend [data-id="' + pid + '"]', function (n) { n.classList.add('is-on'); }); }
+    }
+    var to = cur && centerOf(cur);
+    var prevEl = fromStep !== null && fromStep !== undefined && f.steps[fromStep] ? drawnFor(f.steps[fromStep].node) : null;
+    var from = prevEl && prevEl !== cur ? centerOf(prevEl) : null;
+    travel(trail, from, to);
+  }
+
+  // 이전 단계 → 지금 단계: 등각 축을 따라 꺾이는 길을 빛나는 점이 지나간다.
+  var travelRaf = 0;
+  function travel(trail, a, b) {
+    if (!trail) return;
+    var path = trail.querySelector('path'), dot = trail.querySelector('circle');
+    if (travelRaf) cancelAnimationFrame(travelRaf);
+    if (!b) { path.setAttribute('d', ''); dot.setAttribute('cx', -20); return; }
+    if (!a) { path.setAttribute('d', ''); dot.setAttribute('cx', b[0]); dot.setAttribute('cy', b[1]); return; }
+    var dx = b[0] - a[0], dy = b[1] - a[1], sAx = dy + dx / 2;
+    var corner = [a[0] + sAx, a[1] + sAx / 2];
+    var pts = [a, corner, b];
+    var segs = [Math.hypot(corner[0] - a[0], corner[1] - a[1]), Math.hypot(b[0] - corner[0], b[1] - corner[1])], total = segs[0] + segs[1] || 1;
+    function at(t) {
+      var dist = t * total;
+      if (dist <= segs[0]) { var k = segs[0] ? dist / segs[0] : 1; return [a[0] + (corner[0] - a[0]) * k, a[1] + (corner[1] - a[1]) * k]; }
+      var k2 = segs[1] ? (dist - segs[0]) / segs[1] : 1;
+      return [corner[0] + (b[0] - corner[0]) * k2, corner[1] + (b[1] - corner[1]) * k2];
+    }
+    function draw(t) {
+      var p = at(t), d = 'M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1);
+      if (t * total > segs[0]) d += 'L' + corner[0].toFixed(1) + ' ' + corner[1].toFixed(1);
+      d += 'L' + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
+      path.setAttribute('d', d);
+      dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1));
+    }
+    if (motionOff()) { draw(1); return; }
+    var start = 0, dur = 750;
+    function frame(ts) {
+      if (!start) start = ts;
+      var t = Math.min(1, (ts - start) / dur), e = 1 - Math.pow(1 - t, 3);
+      draw(e);
+      if (t < 1) travelRaf = requestAnimationFrame(frame); else travelRaf = 0;
+    }
+    travelRaf = requestAnimationFrame(frame);
+    return pts;
+  }
+
+  // 설명 타이핑(글자당 20ms, 긴 글은 한 번에 여러 글자). 끝나면 용어 툴팁이 붙은 글로 바꾼다.
+  var typing = null;
+  function stopTyping() { if (typing) { clearTimeout(typing.t); typing.done(); typing = null; } }
+  function typeText(node, text, self) {
+    stopTyping();
+    node.textContent = '';
+    function done() { node.textContent = ''; node.classList.remove('is-typing'); node.appendChild(richText(text, {}, self)); }
+    if (motionOff()) { done(); return; }
+    var i = 0, per = Math.max(1, Math.ceil(text.length / 90));
+    node.classList.add('is-typing');
+    typing = { done: done, t: 0 };
+    (function tick() {
+      i += per;
+      node.textContent = text.slice(0, i);
+      if (i >= text.length) { typing = null; done(); return; }
+      typing.t = setTimeout(tick, TYPE_MS);
+    })();
+  }
+
+  var CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  function scramble(node, text) {
+    if (node._t) clearInterval(node._t);
+    if (motionOff()) { node.textContent = text; return; }
+    var n = 0, steps = 12;
+    node._t = setInterval(function () {
+      n++;
+      var keep = Math.floor(text.length * n / steps), out = text.slice(0, keep);
+      for (var i = keep; i < text.length; i++) out += /\s/.test(text.charAt(i)) ? text.charAt(i) : CHARS.charAt(Math.floor(Math.random() * CHARS.length));
+      node.textContent = out;
+      if (n >= steps) { clearInterval(node._t); node._t = 0; node.textContent = text; }
+    }, 32);
+  }
+
+  /* ---------------- 첫 방문 안내 ---------------- */
+  function tipKey() { return 'kb-tour-tip.' + (state.meta.id || 'page'); }
+  function showTourTip() { if (state.flows.length && store(tipKey()) !== 'done' && state.flow < 0) $('tour-tip').classList.add('is-on'); }
+  function hideTourTip(save) { $('tour-tip').classList.remove('is-on'); if (save) store(tipKey(), 'done'); }
+
+  /* ---------------- 설명창 ----------------
+     왼쪽: 하위 요소를 분해한 그림(번호 지시선), 오른쪽: 개요 → 하위 요소 → 예시 슬라이드 */
+  function slidesOf(id) {
+    var out = [{ kind: 'overview' }];
+    state.nodes[id].childIds.forEach(function (c, i) { out.push({ kind: 'child', id: c, n: i + 1 }); });
+    if (nd(id).ex && nd(id).ex.code) out.push({ kind: 'example' });
+    return out;
+  }
+
+  function openModal(id, slide, opener) {
+    if (!state.nodes[id]) return;
+    hideTip();
+    var wasOpen = !!state.modal;
+    state.modal = { id: id, slide: slide || 0, slides: slidesOf(id), opener: wasOpen ? state.modal.opener : (opener || document.activeElement) };
+    var d = nd(id), m = $('modal');
+    $('md-eyebrow').textContent = enOf(id) + ' · L' + Math.min(3, state.nodes[id].depth);
+    $('md-title').textContent = d.label;
+    var chips = $('md-chips');
+    chips.textContent = '';
+    var kids = state.nodes[id].childIds;
+    if (kids.length) kids.forEach(function (c, i) { chips.appendChild(el('button', { type: 'button', class: 'md-chip', 'data-slide': i + 1, text: nd(c).label })); });
+    else relatedTerms(id).slice(0, 6).forEach(function (t) { chips.appendChild(el('button', { type: 'button', class: 'md-chip tt', 'data-tip': t.id, 'aria-expanded': 'false', text: t.term })); });
+    chips.hidden = !chips.childNodes.length;
+    var dots = $('md-dots');
+    dots.textContent = '';
+    state.modal.slides.forEach(function (s, i) {
+      var name = s.kind === 'overview' ? '개요' : s.kind === 'example' ? '예시' : nd(s.id).label;
+      dots.appendChild(el('button', { type: 'button', class: 'md-dot', 'data-slide': i, 'aria-label': (i + 1) + '. ' + name }));
+    });
+    // 아래 버튼: 안으로 들어가기 · 다음 주제
+    var act = $('md-actions');
+    act.textContent = '';
+    if (kids.length && id !== state.viewId) act.appendChild(el('button', { type: 'button', class: 'tv-btn md-go', 'data-view': id }, ['안으로 들어가기', svgHtml(ARROW_R)]));
+    var sib = siblingsOf(id), k = sib.indexOf(id), nx = sib[k + 1];
+    if (nx) act.appendChild(el('button', { type: 'button', class: 'tv-btn tv-btn--next md-nexttopic', 'data-modal': nx }, ['다음 주제 ' + (k + 2), svgHtml(ARROW_R)]));
+    $('modal-back').hidden = false;
+    m.hidden = false;
+    document.body.classList.add('modal-open');
+    drawExploded(id);
+    showSlide(state.modal.slide);
+    if (!wasOpen) $('md-close').focus();
+  }
+
+  function closeModal() {
+    if (!state.modal) return;
+    var op = state.modal.opener;
+    state.modal = null;
+    hideTip();
+    $('modal').hidden = true;
+    $('modal-back').hidden = true;
+    document.body.classList.remove('modal-open');
+    if (op && op.focus && document.body.contains(op)) op.focus();
+  }
+
+  function showSlide(i) {
+    var M = state.modal;
+    if (!M) return;
+    i = Math.max(0, Math.min(M.slides.length - 1, i));
+    M.slide = i;
+    var s = M.slides[i], id = M.id, d = nd(id), box = $('md-slides');
+    box.textContent = '';
+    var sl = el('article', { class: 'md-slide' });
+    if (s.kind === 'overview') {
+      sl.appendChild(el('p', { class: 'md-s-eyebrow', text: 'OVERVIEW · 개요' }));
+      var used = {}, self = selfKeys(id);
+      sl.appendChild(el('p', { class: 'md-lead' }, [richText(keyOf(id), used, self)]));
+      if (d.role) sl.appendChild(el('p', { class: 'md-role' }, [el('span', { class: 'md-k', text: '흐름에서의 역할' }), richText(d.role, used, self)]));
+      if (d.key && d.desc && d.desc !== d.key) sl.appendChild(el('p', { class: 'md-desc' }, [richText(d.desc, used, self)]));
+    } else if (s.kind === 'child') {
+      var c = nd(s.id), cs = selfKeys(s.id), u2 = {};
+      sl.appendChild(el('p', { class: 'md-s-eyebrow', text: pad2(s.n) + ' · ' + enOf(s.id) }));
+      sl.appendChild(el('h3', { class: 'md-s-title', text: c.label }));
+      sl.appendChild(el('p', { class: 'md-lead' }, [richText(keyOf(s.id), u2, cs)]));
+      if (c.key && c.desc !== c.key) sl.appendChild(el('p', { class: 'md-desc' }, [richText(c.desc, u2, cs)]));
+      sl.appendChild(el('button', { type: 'button', class: 'pill md-open', 'data-modal': s.id }, [state.nodes[s.id].childIds.length ? '이 항목 자세히 (하위 ' + state.nodes[s.id].childIds.length + '개)' : '이 항목 자세히', ' ›']));
+      sl.appendChild(el('p', { class: 'md-src' }, ['출처: ', srcLinks(c.src)]));
+    } else {
+      sl.appendChild(el('p', { class: 'md-s-eyebrow', text: 'EXAMPLE · 예시' }));
+      var ex = exBlock(id, [], '예시' + (d.ex.lang ? ' (' + d.ex.lang + ')' : ''));
+      if (ex) sl.appendChild(ex);
+    }
+    if (s.kind !== 'child') sl.appendChild(el('p', { class: 'md-src' }, ['출처: ', srcLinks(d.src)]));
+    box.appendChild(sl);
+    if (!motionOff()) { sl.classList.add('is-enter'); void sl.offsetWidth; sl.classList.remove('is-enter'); }
+    each('#md-dots .md-dot', function (b, k) { b.classList.toggle('is-on', k === i); if (k === i) b.setAttribute('aria-current', 'true'); else b.removeAttribute('aria-current'); });
+    each('#md-chips .md-chip[data-slide]', function (b) { b.classList.toggle('is-on', +b.getAttribute('data-slide') === i); });
+    each('#md-svg .xp', function (g) { g.classList.toggle('is-on', +g.getAttribute('data-slide') === i); });
+    $('md-prev').disabled = i === 0;
+    $('md-next').disabled = i === M.slides.length - 1;
+  }
+
+  // 분해 그림: 하위 요소를 위아래로 띄워 쌓은 판(5개 이하) 또는 격자 블록(6개 이상), 없으면 블록 하나
+  function drawExploded(id) {
+    var s = $('md-svg');
+    s.textContent = '';
+    var kids = state.nodes[id].childIds, W = 420, H = 460;
+    s.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var K = makeKit(s), cx = 190;
+    if (!kids.length) {
+      var g = svg('g', { class: 'xp is-on', 'data-slide': 0 });
+      s.appendChild(g);
+      K.box(g, cx, 330, 170, 170, 26, 'xp-base');
+      var b = K.box(g, cx, 300, 120, 120, 70, 'xp-bx');
+      K.topIcon(g, iconOf(id), b.top[0], b.top[1], 0, 76);
+      return;
+    }
+    if (kids.length <= 5) {
+      var gap = Math.min(78, 300 / kids.length), base = 120 + kids.length * gap;
+      kids.slice().reverse().forEach(function (c, ri) {
+        var i = kids.length - 1 - ri, y = base - (kids.length - 1 - i) * gap;
+        // 위에서부터 1번: 맨 아래 판을 먼저 그린다
+        var g2 = svg('g', { class: 'xp', 'data-slide': i + 1, 'data-x': c });
+        s.appendChild(g2);
+        var bx = K.box(g2, cx, y, 150, 110, 14, 'xp-bx');
+        K.topIcon(g2, iconOf(c), bx.top[0], bx.top[1], 0, 40);
+        var ax = cx + 128, ay = y - 7, lx = 360;
+        g2.appendChild(svg('polyline', { class: 'xp-lead', points: ptsStr([[ax, ay], [lx - 12, ay]]) }));
+        g2.appendChild(svg('circle', { class: 'xp-num-bg', cx: lx, cy: ay, r: 12 }));
+        K.text(g2, String(i + 1), lx, ay, 11, 'xp-num');
+      });
+      // 부모 받침
+      return;
+    }
+    var cols = 3, cell = 92;
+    kids.map(function (c, i) { return { c: c, i: i, r: Math.floor(i / cols), k: i % cols }; })
+      .sort(function (a, b) { return (a.r + a.k) - (b.r + b.k); })
+      .forEach(function (o) {
+        var rows = Math.ceil(kids.length / cols);
+        var p = isoP(cx + 10, 140, (o.k - 1) * cell, (o.r - (rows - 1) / 2) * cell, 0);
+        var g3 = svg('g', { class: 'xp', 'data-slide': o.i + 1, 'data-x': o.c });
+        s.appendChild(g3);
+        var b3 = K.box(g3, p[0], p[1] + 60, 62, 62, 22, 'xp-bx');
+        K.topIcon(g3, iconOf(o.c), b3.top[0], b3.top[1], 0, 34);
+        g3.appendChild(svg('circle', { class: 'xp-num-bg', cx: b3.top[0] + 34, cy: b3.top[1] - 22, r: 11 }));
+        K.text(g3, String(o.i + 1), b3.top[0] + 34, b3.top[1] - 22, 10.5, 'xp-num');
+      });
+  }
+
+  /* ---------------- 실습 창 ----------------
+     기본 흐름 순서대로, 각 단계 노드(또는 그 하위)에서 처음 나오는 예시를 한 장씩 보여 준다. */
+  function practiceItems() {
+    var out = [], seen = {};
+    function firstEx(id) {
+      if (nd(id).ex && nd(id).ex.code && !seen[id]) return id;
+      var k = state.nodes[id].childIds;
+      for (var i = 0; i < k.length; i++) { var r = firstEx(k[i]); if (r) return r; }
+      return null;
+    }
+    var main = null;
+    state.flows.forEach(function (f) { if (f.main && !main) main = f; });
+    if (main) main.steps.forEach(function (s) { var id = firstEx(s.node); if (id) { seen[id] = true; out.push({ id: id, step: s.node }); } });
+    if (!out.length) state.order.forEach(function (id) { if (out.length < 6 && nd(id).ex && nd(id).ex.code) out.push({ id: id, step: id }); });
+    return out;
+  }
+
+  function buildPractice() {
+    var items = practiceItems(), box = $('practice');
+    state.practiceItems = items;
+    if (!items.length) { box.hidden = true; return; }
+    box.hidden = false;
+    var folded = store('kb-practice-fold') !== 'open' || window.innerWidth < WIDE && store('kb-practice-fold') !== 'open';
+    setPracticeFold(folded);
+    renderPractice();
+  }
+  function setPracticeFold(folded) {
+    var box = $('practice'), b = $('pr-fold');
+    box.classList.toggle('is-folded', folded);
+    $('pr-body').hidden = folded;
+    b.setAttribute('aria-expanded', folded ? 'false' : 'true');
+    b.setAttribute('aria-label', folded ? '실습 창 펼치기' : '실습 창 접기');
+  }
+  function renderPractice() {
+    var items = state.practiceItems, i = state.practice, body = $('pr-body');
+    if (!items || !items.length) return;
+    body.textContent = '';
+    var it = items[i], d = nd(it.id);
+    body.appendChild(el('div', { class: 'pr-chips', role: 'group', 'aria-label': '실습 단계' }, items.map(function (o, k) {
+      return el('button', { type: 'button', class: 'pr-chip' + (k === i ? ' is-on' : ''), 'data-pr': k, 'aria-current': k === i ? 'step' : null, text: (k + 1) + ' ' + nd(o.step).label });
+    })));
+    var screen = el('div', { class: 'pr-screen' }, [
+      el('div', { class: 'pr-bar', 'aria-hidden': 'true' }, [el('i'), el('i'), el('i'), el('span', { text: d.ex.lang || 'example' })]),
+      el('pre', { class: 'pr-code', tabindex: '0', 'aria-label': d.label + ' 예시 코드', text: d.ex.code })
+    ]);
+    body.appendChild(screen);
+    body.appendChild(el('p', { class: 'pr-text' }, [el('b', { text: d.label }), ' — ', richText(keyOf(it.id), {}, selfKeys(it.id))]));
+    body.appendChild(el('p', { class: 'md-src' }, ['출처: ', srcLinks(d.src)]));
+    body.appendChild(el('div', { class: 'pr-nav' }, [
+      el('button', { type: 'button', class: 'pill', 'data-pr': 0, text: '처음부터' }),
+      el('span', { class: 'pr-dots', 'aria-hidden': 'true' }, items.map(function (o, k) { return el('i', { class: k === i ? 'is-on' : '' }); })),
+      el('button', { type: 'button', class: 'pill', 'data-pr': i - 1, disabled: i === 0, 'aria-label': '이전 실습', text: '‹' }),
+      el('button', { type: 'button', class: 'pill is-primary', 'data-pr': i + 1, disabled: i === items.length - 1, 'aria-label': '다음 실습', text: '다음 ›' })
+    ]));
+    applyPractice();
+  }
+  function goPractice(k) {
+    var items = state.practiceItems || [];
+    if (k < 0 || k >= items.length) return;
+    state.practice = k;
+    var had = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-pr');
+    renderPractice();
+    var f = $('pr-body').querySelector('.pr-chip[data-pr="' + k + '"]');
+    if (had !== null && f) f.focus();
+  }
+  // 실습 중인 노드를 장면에서 점선 고리로 표시
+  function applyPractice() {
+    each('#board .is-practice', function (n) { n.classList.remove('is-practice'); });
+    var items = state.practiceItems;
+    if (!items || !items.length || $('practice').classList.contains('is-folded')) return;
+    var n = drawnFor(items[state.practice].id);
+    if (n) n.classList.add('is-practice');
+  }
+
+  function bindPracticeDrag() {
+    var box = $('practice'), head = $('pr-head'), drag = null;
+    head.addEventListener('pointerdown', function (e) {
+      if (window.innerWidth < WIDE || e.target.closest('button')) return;
+      var r = box.getBoundingClientRect();
+      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
+      head.setPointerCapture(e.pointerId);
+      box.classList.add('is-drag');
+    });
+    head.addEventListener('pointermove', function (e) {
+      if (!drag) return;
+      var x = Math.max(8, Math.min(window.innerWidth - box.offsetWidth - 8, e.clientX - drag.dx));
+      var y = Math.max(64, Math.min(window.innerHeight - 60, e.clientY - drag.dy));
+      box.style.left = x + 'px'; box.style.top = y + 'px';
+    });
+    function end() { if (drag) { drag = null; box.classList.remove('is-drag'); } }
+    head.addEventListener('pointerup', end);
+    head.addEventListener('pointercancel', end);
+  }
+
+  /* ---------------- 서랍(구조·용어·출처) ---------------- */
+  var PANE_TITLES = { outline: '구조 전체 보기', terms: '용어', sources: '출처' };
+  function openDrawer(pane, opener) {
+    state.drawerOpener = opener || document.activeElement;
+    $('drawer-title').textContent = PANE_TITLES[pane];
+    each('#drawer .pane', function (p) { p.hidden = p.getAttribute('data-pane') !== pane; });
+    $('drawer').hidden = false;
+    $('drawer-backdrop').hidden = false;
+    document.body.classList.add('drawer-open');
+    if (pane === 'outline') updateOutline(true);
+    (pane === 'terms' ? $('term-search') : $('drawer-close')).focus();
+  }
+  function closeDrawer() {
+    if ($('drawer').hidden) return;
+    $('drawer').hidden = true;
+    $('drawer-backdrop').hidden = true;
+    document.body.classList.remove('drawer-open');
+    hideTip();
+    var op = state.drawerOpener;
+    state.drawerOpener = null;
+    if (op && op.focus && document.body.contains(op)) op.focus();
+  }
+  function trapFocus(e, box) {
+    if (e.key !== 'Tab') return;
+    var f = Array.prototype.filter.call(box.querySelectorAll('button, [href], input, [tabindex]:not([tabindex="-1"])'), function (n) { return !n.disabled && n.offsetParent !== null; });
+    if (!f.length) return;
+    var first = f[0], last = f[f.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
+  function updateOutline(reveal) {
+    state.order.forEach(function (id) {
+      var o = state.nodes[id].ol;
+      if (!o) return;
+      var viewing = id === state.viewId;
+      o.badge.textContent = viewing ? '보는 중' : '';
+      o.li.classList.toggle('is-current', viewing);
+    });
+    if (reveal && state.viewId) pathTo(state.viewId).forEach(function (p) { setOutlineOpen(p, true); });
+  }
+  // 구조·용어에서 노드로 이동: 하위가 있으면 그 안으로, 없으면 부모 화면에서 설명창
+  function goNode(id) {
+    if (!state.nodes[id]) return;
+    closeDrawer();
+    if (state.nodes[id].childIds.length) { setView(id); return; }
+    var p = state.nodes[id].parentId;
+    setView(p);
+    later(function () { openModal(id, 0, $('stage')); }, 300);
+  }
+
+  function renderGuideNav() {
+    var nav = $('guide-nav');
+    nav.textContent = '';
+    nav.appendChild(el('a', { class: 'guide-link', href: HUB, text: '전체 지도' }));
+    GUIDES.forEach(function (g) {
+      nav.appendChild(el('a', { class: 'guide-link', href: g.href, 'aria-current': g.id === state.meta.id ? 'page' : null, text: g.label }));
+    });
+  }
+
+  /* ---------------- 움직임 줄이기 ---------------- */
+  function setMotion(reduce, save) {
+    reduced = reduce;
+    document.documentElement.classList.toggle('kb-reduce', reduce);
+    $('motion-btn').setAttribute('aria-pressed', reduce ? 'true' : 'false');
+    if (save) store('kb-motion', reduce ? 'reduce' : 'full');
   }
 
   /* ---------------- 이벤트 ---------------- */
-  function keyOf(target) {
-    var n = target && target.closest ? target.closest('[data-key]') : null;
-    return n && $('stage').contains(n) ? n.getAttribute('data-key') : null;
+  function idFrom(t) {
+    var n = t.closest && t.closest('[data-id]');
+    return n ? n.getAttribute('data-id') : null;
   }
-
   function bindEvents() {
-    var stage = $('stage');
-    stage.addEventListener('pointerdown', function (e) { state.lastPointer = e.pointerType || 'mouse'; });
-    stage.addEventListener('pointerover', function (e) { if (e.pointerType !== 'touch') setHot(keyOf(e.target)); });
-    stage.addEventListener('pointerleave', function () { setHot(document.activeElement && keyOf(document.activeElement)); });
-    stage.addEventListener('click', function (e) {
-      var k = keyOf(e.target);
-      if (!k) { if (state.lastPointer === 'touch') setHot(null); return; }
-      activate(k, e.detail === 0);
-      state.lastPointer = 'mouse';
+    var board = $('board'), labels = $('labels'), legend = $('legend');
+    // 장면(마우스·터치)
+    board.addEventListener('click', function (e) {
+      var id = idFrom(e.target);
+      if (id) { activate(id, document.querySelector('#labels .lbl[data-id="' + id + '"]')); return; }
     });
-    $('stage-labels').addEventListener('focusin', function (e) { setHot(keyOf(e.target)); });
-    $('stage-labels').addEventListener('focusout', function (e) { if (!e.relatedTarget || !keyOf(e.relatedTarget)) setHot(null); });
-    $('stage-labels').addEventListener('keydown', function (e) {
-      var list = Array.prototype.slice.call($('stage-labels').querySelectorAll('.lbl'));
-      var i = list.indexOf(document.activeElement);
-      if (i < 0) return;
-      var j = -1;
-      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') j = (i + 1) % list.length;
-      else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') j = (i - 1 + list.length) % list.length;
-      else if (e.key === 'Home') j = 0;
-      else if (e.key === 'End') j = list.length - 1;
-      if (j >= 0) { e.preventDefault(); list[j].focus(); }
+    board.addEventListener('mouseover', function (e) { setHot(idFrom(e.target)); });
+    board.addEventListener('mouseleave', function () { setHot(null); });
+    // 라벨·목록(키보드 경로)
+    [labels, legend].forEach(function (box) {
+      box.addEventListener('click', function (e) { var b = e.target.closest('button[data-id]'); if (b) activate(b.getAttribute('data-id'), b); });
+      box.addEventListener('mouseover', function (e) { var b = e.target.closest('[data-id]'); setHot(b ? b.getAttribute('data-id') : null); });
+      box.addEventListener('mouseleave', function () { setHot(null); });
+      box.addEventListener('focusin', function (e) { var b = e.target.closest('[data-id]'); if (b) setHot(b.getAttribute('data-id')); });
+      box.addEventListener('focusout', function () { setHot(null); });
     });
-
-    $('back-btn').addEventListener('click', function (e) { up(e.detail === 0); });
-    $('crumbs').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-view]');
-      if (!b) return;
-      var v = b.getAttribute('data-view') || null;
-      stopAutoplay();
-      state.mode = 'explore'; state.viewId = v; state.selId = null; state.hotId = null;
-      render();
+    // 위쪽
+    $('back').addEventListener('click', function (e) { if (this.hasAttribute('data-up')) { e.preventDefault(); up(); } });
+    $('crumb').addEventListener('click', function (e) {
+      var b = e.target.closest('button[data-view]');
+      if (b) setView(b.getAttribute('data-view') || null);
     });
-    $('toggle-flow').addEventListener('click', function () { setMode(state.mode === 'flow' ? 'explore' : 'flow'); });
-    $('open-outline').addEventListener('click', function (e) { openDrawer('outline', e.currentTarget); });
-    $('open-terms').addEventListener('click', function (e) { openDrawer('terms', e.currentTarget); });
-    $('open-sources').addEventListener('click', function (e) { openDrawer('sources', e.currentTarget); });
+    $('open-outline').addEventListener('click', function () { openDrawer('outline', this); });
+    $('open-terms').addEventListener('click', function () { openDrawer('terms', this); });
+    $('open-sources').addEventListener('click', function () { openDrawer('sources', this); });
+    $('motion-btn').addEventListener('click', function () { setMotion(!reduced, true); });
+    // 흐름 패널
+    $('tours-list').addEventListener('click', function (e) { var b = e.target.closest('[data-flow]'); if (b) openFlow(+b.getAttribute('data-flow')); });
+    $('tours-view').addEventListener('click', function (e) {
+      var b = e.target.closest('.tv-node');
+      if (b) goStep(+b.getAttribute('data-step'));
+      if (e.target.closest('#tv-text') && typing) stopTyping();
+    });
+    $('tour-tip-ok').addEventListener('click', function () { hideTourTip(true); $('tours-list').focus(); });
+    // 왼쪽 아래 설명·설명창
+    document.addEventListener('click', function (e) {
+      var t = e.target;
+      var m = t.closest('[data-modal]');
+      if (m) { openModal(m.getAttribute('data-modal'), 0, m); return; }
+      var go = t.closest('.md-go');
+      if (go) { var v = go.getAttribute('data-view'); closeModal(); setView(v); return; }
+      var sl = t.closest('#modal [data-slide]');
+      if (sl) { showSlide(+sl.getAttribute('data-slide')); return; }
+      var pr = t.closest('#practice [data-pr]');
+      if (pr) { goPractice(+pr.getAttribute('data-pr')); return; }
+      var gn = t.closest('#drawer [data-go]');
+      if (gn) { goNode(gn.getAttribute('data-go')); return; }
+      var tg = t.closest('#drawer [data-toggle]');
+      if (tg) { var tid = tg.getAttribute('data-toggle'); setOutlineOpen(tid, tg.getAttribute('aria-expanded') !== 'true'); return; }
+      var tip = t.closest('.tt');
+      if (tip) { if (tipOwner === tip) hideTip(); else showTip(tip); return; }
+      if (!t.closest('#tip')) hideTip();
+    });
+    $('md-svg').addEventListener('click', function (e) { var g = e.target.closest('.xp'); if (g) showSlide(+g.getAttribute('data-slide')); });
+    $('md-close').addEventListener('click', closeModal);
+    $('modal-back').addEventListener('click', closeModal);
+    $('md-prev').addEventListener('click', function () { showSlide(state.modal.slide - 1); });
+    $('md-next').addEventListener('click', function () { showSlide(state.modal.slide + 1); });
+    // 서랍
     $('drawer-close').addEventListener('click', closeDrawer);
     $('drawer-backdrop').addEventListener('click', closeDrawer);
     $('expand-all').addEventListener('click', function () { state.order.forEach(function (id) { setOutlineOpen(id, true); }); });
     $('collapse-all').addEventListener('click', function () { state.order.forEach(function (id) { setOutlineOpen(id, false); }); });
     $('term-search').addEventListener('input', filterTerms);
     $('term-more').addEventListener('click', function () { state.termsMore = !state.termsMore; syncTermsMore(); });
-
-    // 첫 화면 소개 · 둘러보기
-    $('hero-start').addEventListener('click', function () {
-      store(heroKey(), 'compact');
-      setHeroCompact(true);
-      var f = $('stage-labels').querySelector('.lbl');
-      if (f) f.focus();
+    // 실습 창
+    $('pr-fold').addEventListener('click', function () {
+      var f = !$('practice').classList.contains('is-folded');
+      setPracticeFold(f);
+      store('kb-practice-fold', f ? 'fold' : 'open');
+      applyPractice();
     });
-    $('hero-toggle').addEventListener('click', function () { store(heroKey(), 'open'); setHeroCompact(false); $('hero-start').focus(); });
-    $('tour-btn').addEventListener('click', startTour);
-    $('tour-next').addEventListener('click', function () { if (tour.i >= tour.steps.length - 1) endTour(); else showTourStep(tour.i + 1); });
-    $('tour-prev').addEventListener('click', function () { if (tour.i > 0) showTourStep(tour.i - 1); });
-    $('tour-skip').addEventListener('click', function () { endTour(); });
-    $('caption').addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('cap-more')) state.moreOpen = e.target.open; }, true);
-
-    // 용어 툴팁: 올리기·포커스·누르기 모두 지원
-    function ttOf(t) { return t && t.closest ? t.closest('.tt') : null; }
-    document.addEventListener('mouseover', function (e) { var b = ttOf(e.target); if (b) showTip(b); });
-    document.addEventListener('mouseout', function (e) {
-      var b = ttOf(e.target);
-      if (b && b === tipOwner && !(e.relatedTarget && b.contains(e.relatedTarget)) && document.activeElement !== b) hideTip();
-    });
-    document.addEventListener('focusin', function (e) { var b = ttOf(e.target); if (b) showTip(b); else if (tipOwner) hideTip(); });
-    document.addEventListener('click', function (e) { var b = ttOf(e.target); if (b) { e.preventDefault(); showTip(b); } else if (tipOwner) hideTip(); });
-    window.addEventListener('scroll', hideTip, true);
-
-    function onAction(e) {
-      var t = e.target.closest('[data-go],[data-toggle],[data-drill],[data-term],[data-flow],[data-sel]');
-      if (!t) return;
-      if (t.hasAttribute('data-flow')) { openFlow(+t.getAttribute('data-flow')); return; }
-      if (t.hasAttribute('data-sel')) { var sid = t.getAttribute('data-sel'); select(sid); focusLabel(sid); return; }
-      if (t.hasAttribute('data-toggle')) {
-        var id = t.getAttribute('data-toggle');
-        setOutlineOpen(id, t.getAttribute('aria-expanded') !== 'true');
-      } else if (t.hasAttribute('data-go')) {
-        closeDrawer();
-        focusNode(t.getAttribute('data-go'));
-      } else if (t.hasAttribute('data-drill')) {
-        drill(t.getAttribute('data-drill'), e.detail === 0);
-      } else if (t.hasAttribute('data-term')) {
-        openDrawer('terms', t);
-        $('term-search').value = t.getAttribute('data-term');
-        filterTerms();
-      }
-    }
-    $('drawer').addEventListener('click', onAction);
-    $('caption').addEventListener('click', onAction);
-
-    $('step-prev').addEventListener('click', function () { stopAutoplay(); goStep(state.step - 1); });
-    $('step-next').addEventListener('click', function () { stopAutoplay(); goStep(state.step + 1); });
-    $('step-reset').addEventListener('click', function () { stopAutoplay(); goStep(0); });
-    $('step-play').addEventListener('click', function () { if (state.timer) stopAutoplay(); else startAutoplay(); });
-
+    bindPracticeDrag();
+    // 용어 툴팁: 포인터를 올리면 보이기
+    document.addEventListener('mouseover', function (e) { var b = e.target.closest && e.target.closest('.tt'); if (b && b !== tipOwner) showTip(b); });
+    document.addEventListener('focusin', function (e) { var b = e.target.closest && e.target.closest('.tt'); if (b) showTip(b); else if (tipOwner && !e.target.closest('#tip')) hideTip(); });
+    // 키보드
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && tour.i >= 0) { e.preventDefault(); endTour(); return; }
-      if (e.key === 'Escape' && tipOwner) { e.preventDefault(); var o = tipOwner; hideTip(); if (o.focus) o.focus(); return; }
-      if (!$('drawer').hidden) {
-        if (e.key === 'Escape') { e.preventDefault(); closeDrawer(); }
-        else if (e.key === 'Tab') trapFocus(e);
+      var tag = (e.target.tagName || '').toLowerCase(), typingField = tag === 'input' || tag === 'textarea';
+      if (e.key === 'Escape') {
+        if (tipOwner) { var o = tipOwner; hideTip(); o.focus(); return; }
+        if (state.modal) { closeModal(); return; }
+        if (!$('drawer').hidden) { closeDrawer(); return; }
+        if (state.flow >= 0) { closeFlow(); return; }
+        if (state.viewId) { up(); return; }
         return;
       }
-      var tag = e.target && e.target.tagName;
-      if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || e.altKey || e.ctrlKey || e.metaKey) return;
-      if (e.key === 'Escape' || e.key === 'Backspace') { e.preventDefault(); up(true); return; }
-      if (state.mode === 'flow') {
-        if (e.key === ',' || e.key === '<') { e.preventDefault(); stopAutoplay(); goStep(state.step - 1); }
-        if (e.key === '.' || e.key === '>') { e.preventDefault(); stopAutoplay(); goStep(state.step + 1); }
+      if (state.modal) {
+        trapFocus(e, $('modal'));
+        if (e.key === 'ArrowRight') { e.preventDefault(); showSlide(state.modal.slide + 1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); showSlide(state.modal.slide - 1); }
+        return;
+      }
+      if (!$('drawer').hidden) { trapFocus(e, $('drawer')); return; }
+      if (typingField) return;
+      if (state.flow >= 0 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
+        e.preventDefault();
+        goStep(state.step + (e.key === 'ArrowRight' ? 1 : -1));
       }
     });
-
-    // 크기 변화 → 다시 그리기. 숨은 탭처럼 rAF가 멈춘 환경을 위해 타이머도 함께 건다.
-    var raf = 0, timer = 0, lastW = -1, lastH = -1;
-    function run() {
+    var raf = 0;
+    window.addEventListener('resize', function () {
       if (raf) cancelAnimationFrame(raf);
-      if (timer) clearTimeout(timer);
-      raf = 0; timer = 0;
-      var s = $('stage');
-      if (s.clientWidth === lastW && s.clientHeight === lastH) return;
-      render();
-      lastW = s.clientWidth; lastH = s.clientHeight;
-    }
-    function schedule() {
-      if (raf) cancelAnimationFrame(raf);
-      if (timer) clearTimeout(timer);
-      raf = requestAnimationFrame(run);
-      timer = setTimeout(run, 140);
-    }
-    window.addEventListener('resize', function () { schedule(); hideTip(); positionTour(); });
-    if (window.ResizeObserver) new ResizeObserver(schedule).observe(stage);
-    state.forceRender = function () { lastW = -1; schedule(); };
+      raf = requestAnimationFrame(function () { raf = 0; sizeBoard(); hideTip(); });
+    });
+    window.addEventListener('hashchange', function () {
+      var h = decodeURIComponent((location.hash || '').slice(1));
+      if (h !== (state.viewId || '')) setView(state.nodes[h] ? h : null);
+    });
   }
 
   /* ---------------- 시작 ---------------- */
   function init() {
     var data = window.GUIDE_DATA;
+    var pref = store('kb-motion');
+    setMotion(pref ? pref === 'reduce' : !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches), false);
     if (!data || typeof data !== 'object') {
       warn('data.js를 불러오지 못했습니다. index.html과 같은 폴더에 data.js가 있는지 확인하세요.');
-      safe('헤더', function () { renderHeader({}); });
-      $('caption-body').appendChild(el('p', { class: 'cap-hint', text: '표시할 데이터가 없습니다.' }));
       renderWarnings();
       return;
     }
-    safe('헤더', function () { renderHeader(data.meta); });
+    state.meta = data.meta || {};
+    GUIDES.forEach(function (g) { if (g.id === state.meta.id) state.guide = g; });
+    if (state.guide) document.documentElement.style.setProperty('--h', state.guide.h);
     state.sources = safe('출처 검증', function () { return validateSources(data.sources); }) || {};
     safe('구조 검증', function () {
       validateTree(data.tree, data.examples);
       Object.keys(data.examples || {}).forEach(function (k) { if (!state.nodes[k]) warn('예시(examples)의 "' + k + '"에 해당하는 노드가 없습니다.'); });
     });
     safe('심볼 검증', function () {
-      state.icons = {};
       Object.keys(data.icons || {}).forEach(function (k) {
         if (!state.nodes[k]) warn('심볼(icons)의 "' + k + '"에 해당하는 노드가 없습니다.');
         else if (!ICONS[data.icons[k]] && !logoOf(data.icons[k])) warn('"' + k + '"의 심볼 이름 "' + data.icons[k] + '"을 찾을 수 없어 기본 심볼로 표시합니다.');
@@ -1690,21 +1703,20 @@
     });
     safe('흐름 검증', function () { validateFlows(data.flows); });
     safe('용어 검증', function () { validateTerms(data.terms); });
-    safe('첫 화면 소개', renderHero);
-
+    safe('흐름 목록', renderToursList);
     safe('구조 목록', buildOutline);
     safe('용어 목록', buildTerms);
     safe('출처 목록', function () { renderSources(data); });
-    if (state.flows.length) safe('흐름 선택', renderFlowSelect);
-    else { $('toggle-flow').disabled = true; $('toggle-flow').title = '표시할 흐름 데이터가 없습니다.'; }
-
-    state.viewId = baseView();
+    safe('다른 가이드', renderGuideNav);
     safe('이벤트 연결', bindEvents);
-    render();
+    var h = decodeURIComponent((location.hash || '').slice(1));
+    state.viewId = state.nodes[h] && state.nodes[h].childIds.length ? h : null;
+    safe('장면', renderView);
+    safe('실습 창', buildPractice);
+    updateHint();
     renderWarnings();
-    // 첫 방문이면 둘러보기를 자동으로 띄운다(저장소를 쓸 수 없으면 매번 뜨지만 건너뛰기로 닫을 수 있다)
-    if (store(tourKey()) !== 'done') setTimeout(function () { safe('둘러보기', startTour); }, 450);
-    window.__guide = { state: state, render: render, warnings: warnings, startTour: startTour, endTour: endTour };
+    setTimeout(showTourTip, 1400);
+    window.__guide = { state: state, setView: setView, openFlow: openFlow, openModal: openModal, warnings: warnings };
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
