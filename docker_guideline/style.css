@@ -177,9 +177,10 @@ button.crumb:hover { color: var(--acc-2); }
 .step.is-next .hx { stroke-dasharray: 4 3; stroke: var(--acc-2); }
 
 /* 장면 전환: 이전 장면 사본이 흐려지며 사라지고 새 장면이 나타난다 */
-.scene-in { animation: scene-in .4s cubic-bezier(.2, .8, .3, 1) both; transform-origin: 50% 55%; }
+/* 이전 장면이 먼저 사라진 뒤(0.2s) 새 장면이 나타난다 — 두 장면의 라벨이 겹쳐 보이지 않도록 순차 전환 */
+.scene-in { animation: scene-in .34s cubic-bezier(.2, .8, .3, 1) .18s both; transform-origin: 50% 55%; }
 @keyframes scene-in { from { opacity: 0; transform: scale(.975); } }
-.scene-ghost { position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: scene-out .32s ease-in forwards; transform-origin: 50% 55%; }
+.scene-ghost { position: absolute; inset: 0; z-index: 2; pointer-events: none; animation: scene-out .2s ease-in forwards; transform-origin: 50% 55%; }
 .scene-ghost * { pointer-events: none !important; }
 @keyframes scene-out { to { opacity: 0; transform: scale(1.03); } }
 .cap-in { animation: cap-in .32s ease-out both; }
