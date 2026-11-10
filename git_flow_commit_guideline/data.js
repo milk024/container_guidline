@@ -50,9 +50,9 @@ window.GUIDE_DATA = {
         { id: 'feature', label: 'feature/*', en: 'feature branch', src: ['nvie', 'git-switch', 'git-branch'], desc: 'develop에서 갈라져 기능 하나를 만들고 develop으로 돌아갑니다.',
           ex: { v: 'feature/login', lang: 'bash', code: 'git switch -c feature/login develop\n# … 커밋 …\ngit switch develop\ngit merge --no-ff feature/login\ngit branch -d feature/login' } },
         { id: 'release', label: 'release/*', en: 'release branch', src: ['nvie'], desc: 'develop에서 갈라져 버전 확정·버그 수정만 한 뒤 main·develop에 병합합니다.',
-          ex: { v: 'release/1.2.0', lang: 'bash', code: 'git switch -c release/1.2.0 develop\n# 버전 번호 수정·버그 수정만 (새 기능 금지)\ngit switch main    && git merge --no-ff release/1.2.0\ngit switch develop && git merge --no-ff release/1.2.0\ngit branch -d release/1.2.0' } },
+          ex: { v: 'release/1.2.0', lang: 'bash', code: 'git switch -c release/1.2.0 develop\n# 버전 번호 수정·버그 수정만 (새 기능 금지)\ngit switch main    && git merge --no-ff release/1.2.0\ngit tag -a v1.2.0 -m \"release v1.2.0\"\ngit switch develop && git merge --no-ff release/1.2.0\ngit branch -d release/1.2.0' } },
         { id: 'hotfix', label: 'hotfix/*', en: 'hotfix branch', src: ['nvie'], desc: '운영 버그를 main에서 바로 갈라 고치고 main·develop에 병합합니다.',
-          ex: { v: 'hotfix/1.2.1', lang: 'bash', code: 'git switch -c hotfix/1.2.1 main\ngit commit -am "fix(payment): 결제 금액 반올림 오류 수정"\ngit switch main    && git merge --no-ff hotfix/1.2.1\ngit tag -a v1.2.1 -m "hotfix v1.2.1"\ngit switch develop && git merge --no-ff hotfix/1.2.1' } },
+          ex: { v: 'hotfix/1.2.1', lang: 'bash', code: 'git switch -c hotfix/1.2.1 main\ngit commit -am "fix(payment): 결제 금액 반올림 오류 수정"\ngit switch main    && git merge --no-ff hotfix/1.2.1\ngit tag -a v1.2.1 -m "hotfix v1.2.1"\ngit switch develop && git merge --no-ff hotfix/1.2.1\ngit branch -d hotfix/1.2.1' } },
         { id: 'tag', label: 'Tag · SemVer', en: 'git tag', src: ['git-tag', 'semver'], desc: 'main 병합 지점에 v1.2.0 같은 MAJOR.MINOR.PATCH 이름을 붙입니다.',
           ex: { v: 'v1.2.0', lang: 'bash', code: 'git tag -a v1.2.0 -m "release v1.2.0"\ngit push origin main develop --tags\n\n# MAJOR.MINOR.PATCH\n# 2.0.0  호환이 깨지는 변경\n# 1.3.0  호환되는 기능 추가\n# 1.2.1  호환되는 버그 수정' } }
       ]

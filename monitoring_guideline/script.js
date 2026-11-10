@@ -1533,6 +1533,10 @@
     each('#md-svg .xp', function (g) { g.classList.toggle('is-on', +g.getAttribute('data-slide') === i); });
     $('md-prev').disabled = i === 0;
     $('md-next').disabled = i === M.slides.length - 1;
+    // 안내는 실제로 넘길 수 있을 때만, 지금 위치와 함께 보여 준다
+    var hint = $('md-hint'), n = M.slides.length;
+    hint.hidden = n < 2;
+    hint.textContent = '← → 키나 아래 점으로 넘겨 보세요 · ' + (i + 1) + ' / ' + n;
   }
 
   // 분해 그림: 하위 요소를 위아래로 띄워 쌓은 판(5개 이하) 또는 격자 블록(6개 이상), 없으면 블록 하나
@@ -1835,8 +1839,9 @@
       }
       if (state.modal) {
         trapFocus(e, $('modal'));
-        if (e.key === 'ArrowRight') { e.preventDefault(); showSlide(state.modal.slide + 1); }
-        if (e.key === 'ArrowLeft') { e.preventDefault(); showSlide(state.modal.slide - 1); }
+        // 한글 입력기 등에서 key 값이 다르게 올 때도 방향 키를 알아보도록 keyCode도 함께 본다
+        var dir = e.key === 'ArrowRight' || e.key === 'Right' || e.keyCode === 39 ? 1 : e.key === 'ArrowLeft' || e.key === 'Left' || e.keyCode === 37 ? -1 : 0;
+        if (dir && !e.altKey && !e.metaKey && !e.ctrlKey) { e.preventDefault(); if (tipOwner) hideTip(); showSlide(state.modal.slide + dir); }
         return;
       }
       if (!$('drawer').hidden) { trapFocus(e, $('drawer')); return; }
