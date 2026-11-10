@@ -851,48 +851,94 @@
     });
     if (compact) {
       // 번호만: 부분 위에 바로 놓는다
+      // 번호끼리 겹치면 서로 밀어내고, 제자리에서 벗어난 번호는 짧은 선으로 잇는다
+      var R = 13;
+      items.forEach(function (it) { it.x = it.a[0]; it.y = it.a[1]; });
+      for (var cp = 0; cp < 60; cp++) {
+        var hit = false;
+        for (var ci = 0; ci < items.length; ci++) for (var cj = ci + 1; cj < items.length; cj++) {
+          var P = items[ci], Q = items[cj], dx = Q.x - P.x, dy = Q.y - P.y;
+          var ox = R * 2 - Math.abs(dx), oy = R * 2 - Math.abs(dy);
+          if (ox <= 0 || oy <= 0) continue;
+          hit = true;
+          // 덜 겹친 축으로 반씩 민다(같은 자리면 위아래로)
+          if (ox < oy && Math.abs(dx) > 0.5) { var sx = dx > 0 ? 1 : -1; P.x -= sx * (ox / 2 + 0.5); Q.x += sx * (ox / 2 + 0.5); }
+          else { var sy = dy >= 0 ? 1 : -1; P.y -= sy * (oy / 2 + 0.5); Q.y += sy * (oy / 2 + 0.5); }
+        }
+        items.forEach(function (it) { it.x = Math.max(R, Math.min(W - R, it.x)); it.y = Math.max(R, Math.min(H - R, it.y)); });
+        if (!hit) break;
+      }
       items.forEach(function (it) {
-        it.o.btn.style.left = it.a[0] + 'px'; it.o.btn.style.top = it.a[1] + 'px';
+        it.o.btn.style.left = it.x + 'px'; it.o.btn.style.top = it.y + 'px';
         it.o.btn.tabIndex = -1; it.o.btn.setAttribute('aria-hidden', 'true');
-        it.o.line.setAttribute('points', ''); it.o.dot.setAttribute('r', 0);
+        var off = Math.abs(it.x - it.a[0]) + Math.abs(it.y - it.a[1]) > 3;
+        it.o.line.setAttribute('points', off ? ptsStr([it.a, [it.x, it.y]]) : '');
+        it.o.dot.setAttribute('cx', it.a[0].toFixed(1)); it.o.dot.setAttribute('cy', it.a[1].toFixed(1));
+        it.o.dot.setAttribute('r', off ? 2 : 0);
       });
       return;
     }
-    // 2) 같은 쪽 라벨끼리 세로로 겹치지 않게 민다(위→아래, 넘치면 아래→위)
-    ['l', 'r', 'c'].forEach(function (side) {
-      var col = items.filter(function (it) { return it.o.L.side === side; }).sort(function (a, b) { return a.y - b.y; });
-      if (side === 'c') return;
-      var gap = 6;
-      for (var i = 1; i < col.length; i++) {
-        var p = col[i - 1];
-        if (Math.abs(col[i].x - p.x) < 200 && col[i].y - p.y < (p.h + col[i].h) / 2 + gap) col[i].y = p.y + (p.h + col[i].h) / 2 + gap;
+    // 2) 가로 경계: 화면(흐름 패널 앞)과 래퍼 밖 12px 안쪽에 들어오게 x를 당긴다.
+    //    래퍼는 전환 중 확대·축소될 수 있으므로 변형을 무시하는 offset 값으로 계산한다.
+    var wl = pageLeft(wrap), wide = window.innerWidth >= WIDE;
+    var tp = $('tours').getBoundingClientRect();
+    var lo = Math.max(-12, 16 - wl), hi = Math.min(W + 12, (wide ? tp.left : window.innerWidth) - 16 - wl);
+    function boxOf(it) {
+      var sd = it.o.L.side, x0 = sd === 'l' ? it.x - it.w : sd === 'c' ? it.x - it.w / 2 : it.x;
+      return { x0: x0, y0: it.y - it.h / 2, x1: x0 + it.w, y1: it.y + it.h / 2 };
+    }
+    function clampX(it) {
+      var b = boxOf(it);
+      if (b.x0 < lo) it.x += lo - b.x0;
+      else if (b.x1 > hi) it.x -= Math.max(0, Math.min(b.x1 - hi, b.x0 - lo));
+    }
+    function clampY(it) { it.y = Math.max(it.h / 2 + 2, Math.min(H - it.h / 2 - 2, it.y)); }
+    items.forEach(function (it) { clampX(it); clampY(it); });
+    // 3) 겹침 풀기: 겹친 두 라벨을 세로로 벌린다(가로로 덜 겹친 쪽이면 가로로). 끝까지 안 풀리면 다시 반복.
+    var gap = 6;
+    for (var pass = 0; pass < 80; pass++) {
+      var moved = false;
+      for (var i = 0; i < items.length; i++) {
+        for (var j = i + 1; j < items.length; j++) {
+          var A = items[i], B = items[j], a = boxOf(A), b = boxOf(B);
+          var ox = Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) + gap, oy = Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0) + gap;
+          if (ox <= 0 || oy <= 0) continue;
+          moved = true;
+          var up = A.y < B.y || (A.y === B.y && i < j) ? A : B, dn = up === A ? B : A;
+          if (ox < oy * 0.6) {
+            var lf = (a.x0 + a.x1) < (b.x0 + b.x1) ? A : B, rt = lf === A ? B : A;
+            lf.x -= ox / 2; rt.x += ox / 2; clampX(lf); clampX(rt);
+          } else {
+            up.y -= oy / 2; dn.y += oy / 2;
+            // 위·아래 끝에 걸리면 반대쪽이 마저 움직인다
+            var uy = up.y, dy = dn.y; clampY(up); clampY(dn);
+            if (up.y !== uy) dn.y += up.y - uy;
+            if (dn.y !== dy) up.y -= dy - dn.y;
+            clampY(up); clampY(dn);
+          }
+        }
       }
-      for (var j = col.length - 1; j >= 0; j--) {
-        var maxY = j === col.length - 1 ? H - col[j].h / 2 - 2 : col[j + 1].y - (col[j + 1].h + col[j].h) / 2 - gap;
-        if (col[j].y > maxY) col[j].y = maxY;
-        if (col[j].y < col[j].h / 2 + 2) col[j].y = col[j].h / 2 + 2;
-      }
-    });
+      if (!moved) break;
+    }
+    // 4) 배치 + 지시선: 기준점에서 라벨 상자의 가장 가까운 가장자리까지 잇는다
     items.forEach(function (it) {
-      var o = it.o, side = o.L.side, x = Math.max(4, Math.min(W - 4, it.x));
+      var o = it.o, b = boxOf(it);
       o.btn.tabIndex = 0; o.btn.removeAttribute('aria-hidden');
-      o.btn.style.left = x + 'px'; o.btn.style.top = it.y + 'px';
-      // 라벨이 화면 밖으로 나가지 않게
-      var tail = side === 'l' ? x - 6 : side === 'r' ? x + 6 : x;
-      var pts = side === 'c' ? [it.a, [x, it.y - it.h / 2]] : [it.a, [x, it.y], [tail, it.y]];
+      o.btn.style.left = it.x + 'px'; o.btn.style.top = it.y + 'px';
+      var ax = it.a[0], ay = it.a[1], pts;
+      var inX = ax >= b.x0 && ax <= b.x1, inY = ay >= b.y0 && ay <= b.y1;
+      if (inX && inY) pts = [it.a, it.a];
+      else if (inX) pts = [it.a, [ax, ay < b.y0 ? b.y0 : b.y1]];
+      else {
+        var ex = ax < b.x0 ? b.x0 : b.x1, ey = Math.max(b.y0 + 8, Math.min(b.y1 - 8, it.y));
+        var mx = ex + (ax < b.x0 ? -10 : 10);
+        pts = Math.abs(ax - ex) > 14 ? [it.a, [mx, ey], [ex, ey]] : [it.a, [ex, ey]];
+      }
       o.line.setAttribute('points', ptsStr(pts));
-      o.dot.setAttribute('cx', it.a[0].toFixed(1)); o.dot.setAttribute('cy', it.a[1].toFixed(1)); o.dot.setAttribute('r', 2.5);
-    });
-    // 좁은 쪽 경계 보정: 라벨이 래퍼 밖으로 나가면 안쪽으로 당긴다
-    items.forEach(function (it) {
-      var b = it.o.btn, r = b.getBoundingClientRect(), wr = wrap.getBoundingClientRect(), dx = 0;
-      var tp = $('tours').getBoundingClientRect(), wide = window.innerWidth >= WIDE;
-      var lo = Math.max(wr.left - 12, 16), hi = Math.min(wr.right + 12, (wide ? tp.left : window.innerWidth) - 16);
-      if (r.left < lo) dx = lo - r.left;
-      if (r.right > hi) dx = hi - r.right;
-      if (dx) b.style.left = (parseFloat(b.style.left) + dx) + 'px';
+      o.dot.setAttribute('cx', ax.toFixed(1)); o.dot.setAttribute('cy', ay.toFixed(1)); o.dot.setAttribute('r', 2.5);
     });
   }
+  function pageLeft(n) { var x = 0; while (n) { x += n.offsetLeft; n = n.offsetParent; } return x - (window.pageXOffset || 0); }
 
   /* ---------------- 강조·선택 ---------------- */
   function partEls(id) {
