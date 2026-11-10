@@ -598,7 +598,7 @@
 
   // 장면을 그리는 도구 모음. scene.js(GUIDE_SCENE.draw)와 엔진의 일반 장면이 같은 도구를 쓴다.
   function makeKit(layer) {
-    var K = { parts: {}, subs: {}, labels: [], nb: {}, layer: layer, P: isoP };
+    var K = { parts: {}, subs: {}, labels: [], nb: {}, layer: layer, P: isoP, obst: [] };
     K.has = function (id) { return !!state.nodes[id]; };
     K.g = function (parent, cls) { var g = svg('g', { class: cls || '' }); (parent || layer).appendChild(g); return g; };
     // 누를 수 있는 부분(노드 하나). 데이터에 없는 노드면 화면에 붙이지 않은 빈 그룹을 돌려준다.
@@ -643,6 +643,8 @@
       var g = svg('g', { class: 'top-ico', transform: topMatrix(sx, sy, z) });
       drawIcon(g, name, 0, 0, size, 'ico');
       parent.appendChild(g);
+      // 윗면에 눕힌 아이콘의 화면 상자(라벨이 덮지 않게 피할 자리)
+      K.obst.push([sx - size / 2, sy - (z || 0) - size / 4, size, size / 2]);
       return g;
     };
     K.topText = function (parent, text, sx, sy, z, size, cls) {
@@ -654,7 +656,7 @@
       return g;
     };
     // 세워 둔 아이콘(떠 있는 물체용)
-    K.icon = function (parent, name, cx, cy, size) { return drawIcon(parent, name, cx, cy, size, 'ico'); };
+    K.icon = function (parent, name, cx, cy, size) { K.obst.push([cx - size / 2, cy - size / 2, size, size]); return drawIcon(parent, name, cx, cy, size, 'ico'); };
     K.text = function (parent, text, x, y, size, cls, anchor) {
       var t = svg('text', { class: 'sc-tx' + (cls ? ' ' + cls : ''), x: x, y: y, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', 'font-size': size || 11 });
       t.textContent = text;
@@ -783,7 +785,15 @@
     var r = stage.getBoundingClientRect();
     var availW = Math.max(240, r.width - 32), w = availW;
     if (window.innerWidth >= WIDE) {
-      var availH = Math.max(260, r.height - 96);
+      // 장면 칸 높이에서 위 여백과 다른 요소(설명 등)의 실제 높이를 빼고 남는 만큼만 쓴다
+      var cs = window.getComputedStyle(stage), used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom) + 16;
+      Array.prototype.forEach.call(stage.children, function (c) {
+        if (c === wrap || c.hidden) return;
+        var p = window.getComputedStyle(c).position;
+        if (p === 'absolute' || p === 'fixed') return;
+        used += c.offsetHeight + (parseFloat(window.getComputedStyle(c).marginTop) || 0);
+      });
+      var availH = Math.max(200, r.height - used);
       w = Math.min(availW, availH * state.vb[0] / state.vb[1]);
     }
     wrap.style.width = Math.floor(w) + 'px';
@@ -895,7 +905,25 @@
     function clampY(it) { it.y = Math.max(it.h / 2 + 2, Math.min(H - it.h / 2 - 2, it.y)); }
     items.forEach(function (it) { clampX(it); clampY(it); });
     // 3) 겹침 풀기: 겹친 두 라벨을 세로로 벌린다(가로로 덜 겹친 쪽이면 가로로). 끝까지 안 풀리면 다시 반복.
-    var gap = 6;
+    //    블록 아이콘은 움직이지 않는 장애물: 라벨이 아이콘을 덮으면 라벨만 비켜 간다.
+    // 아이콘 장애물은 실제로 그려진 모양의 화면 상자로 잰다(전환 중 확대·축소는 비율로 되돌린다)
+    var gap = 6, obst = [], bsv = $('board'), br = bsv.getBoundingClientRect(), bk = br.width ? W / br.width : 1;
+    Array.prototype.forEach.call(bsv.querySelectorAll('.part:not(.slab) .top-ico, .part:not(.slab) .ico'), function (n) {
+      var r = n.getBoundingClientRect(); if (!r.width) return;
+      obst.push({ x0: (r.left - br.left) * bk - 3, y0: (r.top - br.top) * bk - 3, x1: (r.right - br.left) * bk + 3, y1: (r.bottom - br.top) * bk + 3 });
+    });
+    function dodge(it) {
+      var hit = false;
+      obst.forEach(function (o) {
+        var b = boxOf(it), ox = Math.min(b.x1, o.x1) - Math.max(b.x0, o.x0) + 2, oy = Math.min(b.y1, o.y1) - Math.max(b.y0, o.y0) + 2;
+        if (ox <= 0 || oy <= 0) return;
+        hit = true;
+        var cy = (b.y0 + b.y1) / 2, oc = (o.y0 + o.y1) / 2, cx = (b.x0 + b.x1) / 2, ocx = (o.x0 + o.x1) / 2;
+        if (ox < oy) it.x += cx < ocx ? -ox : ox; else it.y += cy < oc ? -oy : oy;
+        clampX(it); clampY(it);
+      });
+      return hit;
+    }
     for (var pass = 0; pass < 80; pass++) {
       var moved = false;
       for (var i = 0; i < items.length; i++) {
@@ -918,8 +946,36 @@
           }
         }
       }
+      items.forEach(function (it) { if (dodge(it)) moved = true; });
       if (!moved) break;
     }
+    // 3-2) 그래도 남은 겹침: 앞에서부터 하나씩 확정하며, 겹치는 라벨은 가장 가까운 빈자리로 옮긴다
+    function over(b, o, m) { return b.x0 < o.x1 + m && o.x0 < b.x1 + m && b.y0 < o.y1 + m && o.y0 < b.y1 + m; }
+    var placed = [];
+    function free(it) {
+      var b = boxOf(it);
+      if (b.x0 < lo - 0.5 || b.x1 > hi + 0.5 || b.y0 < 1 || b.y1 > H - 1) return false;
+      for (var k = 0; k < obst.length; k++) if (over(b, obst[k], 0)) return false;
+      for (k = 0; k < placed.length; k++) if (over(b, boxOf(placed[k]), gap - 1)) return false;
+      return true;
+    }
+    items.slice().sort(function (p, q) { return p.y - q.y; }).forEach(function (it) {
+      if (!free(it)) {
+        var x0 = it.x, y0 = it.y, best = null, bd = 1e9;
+        for (var dy = 0; dy <= H; dy += 6) {
+          if (dy * 0.7 > bd) break;
+          [dy, -dy].forEach(function (yy) {
+            [0, -0.5, 0.5, -1, 1, -1.5, 1.5].forEach(function (fx) {
+              it.x = x0 + fx * it.w; it.y = y0 + yy;
+              var d = Math.abs(yy) + Math.abs(fx * it.w) * 0.7;
+              if (d < bd && free(it)) { bd = d; best = [it.x, it.y]; }
+            });
+          });
+        }
+        if (best) { it.x = best[0]; it.y = best[1]; } else { it.x = x0; it.y = y0; }
+      }
+      placed.push(it);
+    });
     // 4) 배치 + 지시선: 기준점에서 라벨 상자의 가장 가까운 가장자리까지 잇는다
     items.forEach(function (it) {
       var o = it.o, b = boxOf(it);
@@ -1546,8 +1602,9 @@
   function buildPractice() {
     var items = practiceItems(), box = $('practice');
     state.practiceItems = items;
-    if (!items.length) { box.hidden = true; return; }
+    if (!items.length) { box.hidden = true; document.documentElement.classList.remove('pr-on', 'pr-folded'); return; }
     box.hidden = false;
+    document.documentElement.classList.add('pr-on');
     var folded = store('kb-practice-fold') !== 'open' || window.innerWidth < WIDE && store('kb-practice-fold') !== 'open';
     setPracticeFold(folded);
     renderPractice();
@@ -1558,6 +1615,9 @@
     $('pr-body').hidden = folded;
     b.setAttribute('aria-expanded', folded ? 'false' : 'true');
     b.setAttribute('aria-label', folded ? '실습 창 펼치기' : '실습 창 접기');
+    document.documentElement.classList.toggle('pr-folded', folded);
+    // 자리가 바뀌었으니 장면 크기·라벨을 다시 맞춘다
+    if (state.kit) sizeBoard();
   }
   function renderPractice() {
     var items = state.practiceItems, i = state.practice, body = $('pr-body');
@@ -1598,26 +1658,6 @@
     if (!items || !items.length || $('practice').classList.contains('is-folded')) return;
     var n = drawnFor(items[state.practice].id);
     if (n) n.classList.add('is-practice');
-  }
-
-  function bindPracticeDrag() {
-    var box = $('practice'), head = $('pr-head'), drag = null;
-    head.addEventListener('pointerdown', function (e) {
-      if (window.innerWidth < WIDE || e.target.closest('button')) return;
-      var r = box.getBoundingClientRect();
-      drag = { dx: e.clientX - r.left, dy: e.clientY - r.top, id: e.pointerId };
-      head.setPointerCapture(e.pointerId);
-      box.classList.add('is-drag');
-    });
-    head.addEventListener('pointermove', function (e) {
-      if (!drag) return;
-      var x = Math.max(8, Math.min(window.innerWidth - box.offsetWidth - 8, e.clientX - drag.dx));
-      var y = Math.max(64, Math.min(window.innerHeight - 60, e.clientY - drag.dy));
-      box.style.left = x + 'px'; box.style.top = y + 'px';
-    });
-    function end() { if (drag) { drag = null; box.classList.remove('is-drag'); } }
-    head.addEventListener('pointerup', end);
-    head.addEventListener('pointercancel', end);
   }
 
   /* ---------------- 서랍(구조·용어·출처) ---------------- */
@@ -1779,7 +1819,6 @@
       store('kb-practice-fold', f ? 'fold' : 'open');
       applyPractice();
     });
-    bindPracticeDrag();
     // 용어 툴팁: 포인터를 올리면 보이기
     document.addEventListener('mouseover', function (e) { var b = e.target.closest && e.target.closest('.tt'); if (b && b !== tipOwner) showTip(b); });
     document.addEventListener('focusin', function (e) { var b = e.target.closest && e.target.closest('.tt'); if (b) showTip(b); else if (tipOwner && !e.target.closest('#tip')) hideTip(); });
