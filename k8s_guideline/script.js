@@ -688,18 +688,6 @@
     var W = cols * cell + pad * 2, D = rows * cell + pad * 2;
     var CX = 500, CY = 352 - Math.max(0, (rows - 2)) * 20;
 
-    // 이웃(형제) — 화면 네 모서리(필요하면 좌우 가운데)에 작은 판
-    if (vid) {
-      var spots = [[118, 132], [882, 132], [118, 548], [882, 548], [70, 340], [930, 340]];
-      siblingsOf(vid).filter(function (s) { return s !== vid; }).slice(0, spots.length).forEach(function (sid, i) {
-        var sp = spots[i], g = K.part(sid, 'nb');
-        var b = K.box(g, sp[0], sp[1], 54, 54, 14, 'nb-bx');
-        K.topIcon(g, iconOf(sid), sp[0], sp[1], b.z, 30);
-        K.nb[sid] = true;
-        K.label(sid, [sp[0], sp[1] + 30], [sp[0], sp[1] + 46], 'c');
-      });
-    }
-
     var slabG = vid ? K.part(vid, 'slab') : K.g(null, 'slab-deco');
     var slab = K.box(slabG, CX, CY, W, D, slabH, 'slab-bx');
     var tp = isoP(CX, CY, 0, D / 2 - 15, 0);
@@ -713,7 +701,7 @@
       return { id: id, x: x, y: y };
     }).sort(function (a, b) { return (a.x + a.y) - (b.x + b.y); });
     cells.forEach(function (c) {
-      var base = isoP(CX, CY, c.x, c.y, slabH), deep = state.nodes[c.id].childIds.length > 0;
+      var base = isoP(CX, CY, c.x, c.y, slabH), deep = false; // 장면은 두 단계까지만: 안쪽 블록은 들어가지 않고 설명창으로 연다
       var g = K.part(c.id, 'blk');
       var b;
       if (deep) {
@@ -834,8 +822,10 @@
     });
   }
 
+  // 장면은 두 단계(전체 → 영역)까지만. 들어갈 수 있는 것은 하위가 있는 최상위 영역뿐이다.
+  function canEnter(id) { return !!(state.nodes[id] && state.nodes[id].parentId === null && state.nodes[id].childIds.length); }
   function actionText(id) {
-    if (isDrillTarget(id)) return state.nodes[id].childIds.length ? '안으로 들어가기' : '자세히 보기';
+    if (isDrillTarget(id) && canEnter(id)) return '들어가기';
     return '자세히 보기';
   }
   function isDrillTarget(id) {
@@ -1026,13 +1016,13 @@
     }
     h.classList.remove('is-key');
     h.textContent = state.flow >= 0 ? '오른쪽 패널에서 단계를 넘기며 따라가 보세요'
-      : !state.viewId && window.GUIDE_SCENE ? '영역에 포인터를 올리면 핵심 한 줄 · 누르면 안으로 들어갑니다'
+      : !state.viewId && window.GUIDE_SCENE ? '영역을 누르면 들어갑니다 · 포인터를 올리면 핵심 한 줄'
         : '구성 요소를 눌러 자세히 보기';
   }
 
   function activate(id, opener) {
     if (!state.nodes[id]) return;
-    if (isDrillTarget(id) && state.nodes[id].childIds.length) { setView(id); return; }
+    if (isDrillTarget(id) && canEnter(id)) { setView(id); return; }
     openModal(id, 0, opener);
   }
 
@@ -1070,7 +1060,7 @@
   }
   function setView(id, focusId) {
     if (id && !state.nodes[id]) id = null;
-    if (id && !state.nodes[id].childIds.length) id = state.nodes[id].parentId;
+    if (id && !canEnter(id)) { var root = pathTo(id)[0]; id = canEnter(root) ? root : null; }
     if (id === state.viewId) { updateTop(); return; }
     var stage = $('stage'), wrap = $('board-wrap'), prev = state.viewId;
     var pNew = id ? pathTo(id) : [], pOld = prev ? pathTo(prev) : [];
@@ -1141,17 +1131,15 @@
     var back = $('back'), crumb = $('crumb'), vid = state.viewId;
     if (vid) {
       var pid = state.nodes[vid].parentId;
-      back.setAttribute('href', '#' + (pid || ''));
-      back.setAttribute('data-up', '1');
-      $('back-text').textContent = pid ? nd(pid).label : (state.guide ? state.guide.label : '처음');
       $('stage-up').hidden = false;
       $('stage-up-to').textContent = pid ? nd(pid).label : (state.guide ? state.guide.label : '처음 화면');
     } else {
       $('stage-up').hidden = true;
-      back.setAttribute('href', HUB);
-      back.removeAttribute('data-up');
-      $('back-text').textContent = '전체 지도';
     }
+    // 머리말의 뒤로 버튼은 언제나 전체 지도(다른 페이지)로. 장면 안에서 나가기는 장면 왼쪽 위 버튼 하나로 통일한다.
+    back.setAttribute('href', HUB);
+    back.removeAttribute('data-up');
+    $('back-text').textContent = '전체 지도';
     crumb.textContent = '';
     var parts = [el('a', { href: HUB, class: 'cr-link', text: 'INFRA KNOWLEDGE BASE' })];
     var g = state.guide ? state.guide.en : (state.meta.title || 'GUIDE');
@@ -1465,10 +1453,10 @@
       var name = s.kind === 'overview' ? '개요' : s.kind === 'example' ? '예시' : nd(s.id).label;
       dots.appendChild(el('button', { type: 'button', class: 'md-dot', 'data-slide': i, 'aria-label': (i + 1) + '. ' + name }));
     });
-    // 아래 버튼: 안으로 들어가기 · 다음 주제
+    // 아래 버튼: 들어가기(최상위 영역만) · 다음 주제
     var act = $('md-actions');
     act.textContent = '';
-    if (kids.length && id !== state.viewId) act.appendChild(el('button', { type: 'button', class: 'tv-btn md-go', 'data-view': id }, ['안으로 들어가기', svgHtml(ARROW_R)]));
+    if (canEnter(id) && id !== state.viewId) act.appendChild(el('button', { type: 'button', class: 'nav-btn md-go', 'data-view': id }, ['들어가기', svgHtml(ARROW_R)]));
     var sib = siblingsOf(id), k = sib.indexOf(id), nx = sib[k + 1];
     if (nx) act.appendChild(el('button', { type: 'button', class: 'tv-btn tv-btn--next md-nexttopic', 'data-modal': nx }, ['다음 주제 ' + (k + 2), svgHtml(ARROW_R)]));
     $('modal-back').hidden = false;
@@ -1720,9 +1708,8 @@
   function goNode(id) {
     if (!state.nodes[id]) return;
     closeDrawer();
-    if (state.nodes[id].childIds.length) { setView(id); return; }
-    var p = state.nodes[id].parentId;
-    setView(p);
+    if (canEnter(id)) { setView(id); return; }
+    setView(pathTo(id)[0]);
     later(function () { openModal(id, 0, $('stage')); }, 300);
   }
 
@@ -1909,7 +1896,7 @@
     safe('다른 가이드', renderGuideNav);
     safe('이벤트 연결', bindEvents);
     var h = decodeURIComponent((location.hash || '').slice(1));
-    state.viewId = state.nodes[h] && state.nodes[h].childIds.length ? h : null;
+    state.viewId = state.nodes[h] && canEnter(pathTo(h)[0]) ? pathTo(h)[0] : null;
     safe('장면', renderView);
     safe('장면 등장', popParts);
     safe('실습 창', buildPractice);
