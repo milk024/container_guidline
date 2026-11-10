@@ -285,6 +285,18 @@ window.GUIDE_DATA = {
     }
   ],
 
+  // 장면에서 각 항목을 나타내는 심볼(엔진 script.js의 ICONS 이름)
+  icons: {
+    "pipeline": "pipe", "source": "branch", "repo": "folder", "push": "upload", "trigger": "bell", "build": "build",
+    "workflow": "workflow", "gha": "manifest", "jobstep": "list", "secrets": "key", "jenkinsfile": "file", "jstage": "list",
+    "jpost": "check", "jcreds": "key", "runner": "robot", "k8sagent": "pod", "imagebuild": "package", "test": "check",
+    "unittest": "check", "helmlint": "search", "scan": "shield", "package": "package", "tagging": "tag", "registry": "cloud",
+    "hproject": "folder", "robot": "robot", "pullsecret": "lock", "retention": "history", "immutable": "lock", "replication": "copy",
+    "gc": "trash", "chart": "package", "ctemplates": "brace", "cvalues": "sliders", "hooks": "link", "deploy": "rocket",
+    "helmupgrade": "upload", "release": "history", "rbfail": "undo", "manifest": "manifest", "argocd": "sync", "app": "target",
+    "syncstatus": "pulse", "autosync": "sync", "wave": "wave", "appset": "copy", "rollout": "route", "rollback": "undo"
+  },
+
   flows: [
     {
       id: 'gitops', title: '목표 구성: GitOps(Pull) 파이프라인', src: ['jenkins-pipeline', 'kaniko', 'harbor', 'argocd'],

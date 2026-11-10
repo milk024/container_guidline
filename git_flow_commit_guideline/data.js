@@ -137,6 +137,17 @@ window.GUIDE_DATA = {
     }
   ],
 
+  // 장면에서 각 항목을 나타내는 심볼(엔진 script.js의 ICONS 이름)
+  icons: {
+    "branches": "branch", "main": "star", "develop": "branch", "feature": "branch", "release": "flag", "hotfix": "bug",
+    "tag": "tag", "integrate": "merge", "pr": "pr", "noff": "merge", "squash": "commit", "rebase": "history",
+    "message": "chat", "type": "tag", "t-feat": "star", "t-fix": "bug", "t-docs": "file", "t-style": "brace",
+    "t-refactor": "sync", "t-perf": "gauge", "t-test": "check", "t-build": "build", "t-ci": "workflow", "t-chore": "sliders",
+    "t-revert": "undo", "scope": "scope", "subject": "chat", "body": "file", "footer": "flag", "atomic": "commit",
+    "history": "history", "log": "list", "amend": "commit", "interactive": "list", "revert": "undo", "alternatives": "route",
+    "githubflow": "branch", "gitlabflow": "layers", "trunk": "commit", "featureflag": "toggle"
+  },
+
   flows: [
     {
       id: 'feature', title: '기능 개발 흐름 (feature → develop)', src: ['nvie', 'git-switch', 'git-rebase', 'git-merge'],

@@ -1,7 +1,8 @@
 /* ==========================================================================
    공통 렌더링 엔진 — 4개 학습 페이지가 동일한 파일을 사용합니다.
    내용(구조·흐름·용어·출처)은 같은 폴더의 data.js(window.GUIDE_DATA)에만 있습니다.
-   - 아이소메트릭(등각) 장면: 상위 영역은 분해된 레이어, 하위 영역은 보드 위 부품으로 그립니다.
+   - 아이소메트릭(등각) 장면: 상위 영역은 분해된 레이어, 하위 영역·흐름 단계는 보드 위 심볼(육각 배지+아이콘)로 그립니다.
+   - 장면이 바뀌면 이전 장면이 흐려지며 새 장면이 나타나고(크로스페이드), 선택이 바뀌면 설명이 페이드 인됩니다.
    - 영역에 포인터를 올리면 떠오르며 빛나고, 누르면 그 안으로 들어갑니다.
    - 데이터 일부가 잘못되어도 해당 항목만 건너뛰고 경고를 표시하며, 나머지는 동작합니다.
    - 외부 라이브러리 없이 순수 JavaScript(ES5)로 작성해 file://에서도 그대로 동작합니다.
@@ -240,35 +241,6 @@
     poly(g, [I(x, y, z + h), I(x + w, y, z + h), I(x + w, y + d, z + h), I(x, y + d, z + h)], c + 'f-top');
   }
 
-  // 윗면 장식(칩·팬·슬롯) — id 해시로 고정 선택해 항목마다 다르게 보이게 한다.
-  function motif(g, P, b, id) {
-    var I = P.I, top = b.z + b.h, cx = b.x + b.w / 2, cy = b.y + b.d / 2, kind = hash(id) % 3;
-    if (kind === 0) {
-      var ix = b.w * 0.24, iy = b.d * 0.24;
-      poly(g, [I(b.x + ix, b.y + iy, top), I(b.x + b.w - ix, b.y + iy, top), I(b.x + b.w - ix, b.y + b.d - iy, top), I(b.x + ix, b.y + b.d - iy, top)], 'motif');
-    } else if (kind === 1) {
-      [0.34, 0.14].forEach(function (k) {
-        var r = Math.min(b.w, b.d) * k, list = [];
-        for (var i = 0; i < 20; i++) { var a = i / 20 * Math.PI * 2; list.push(I(cx + Math.cos(a) * r, cy + Math.sin(a) * r, top)); }
-        poly(g, list, 'motif');
-      });
-    } else {
-      [0.3, 0.5, 0.7].forEach(function (k) {
-        var a = I(b.x + b.w * 0.2, b.y + b.d * k, top), c = I(b.x + b.w * 0.8, b.y + b.d * k, top);
-        g.appendChild(svg('line', { x1: a[0], y1: a[1], x2: c[0], y2: c[1], class: 'motif' }));
-      });
-    }
-  }
-
-  // 하위 항목이 있는 블록 윗면에 작은 부품을 올려 "안에 더 있음"을 모양으로도 알린다.
-  function miniCubes(g, P, b, count) {
-    var k = Math.min(count, 4), c = Math.min(b.w, b.d) * 0.26, top = b.z + b.h;
-    var spots = [[0.18, 0.18], [0.56, 0.18], [0.18, 0.56], [0.56, 0.56]];
-    for (var i = 0; i < k; i++) {
-      drawBox(g, P, { x: b.x + b.w * spots[i][0], y: b.y + b.d * spots[i][1], z: top, w: c, d: c, h: c * 0.75 }, 'm-');
-    }
-  }
-
   function marker(g, P, b, num) {
     var p = P.I(b.x + b.w / 2, b.y + b.d / 2, b.z + b.h);
     var r = Math.max(8, Math.min(12, P.s * 0.9));
@@ -276,19 +248,6 @@
     var t = svg('text', { x: p[0], y: p[1] - r - 2, class: 'num-tx', 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': Math.round(r * 1.05) });
     t.textContent = String(num);
     g.appendChild(t);
-  }
-
-  function makeBlock(layer, P, b, key, opts) {
-    var I = P.I, g = svg('g', { class: 'blk' + (opts.cls ? ' ' + opts.cls : ''), 'data-key': key });
-    var m = 0.5;
-    poly(g, [I(b.x - m, b.y - m, b.z), I(b.x + b.w + m * 2, b.y - m, b.z), I(b.x + b.w + m * 2, b.y + b.d + m * 2, b.z), I(b.x - m, b.y + b.d + m * 2, b.z)], 'shadow');
-    var lift = svg('g', { class: 'lift' });
-    g.appendChild(lift);
-    drawBox(lift, P, b);
-    if (opts.kids) miniCubes(lift, P, b, opts.kids); else motif(lift, P, b, opts.motifId || key);
-    if (opts.num) marker(lift, P, b, opts.num);
-    layer.appendChild(g);
-    return g;
   }
 
   function defs() {
@@ -301,6 +260,143 @@
       '<marker id="arr-on" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#ddd6fe"/></marker>' +
       '<marker id="arr-off" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#6d5fb3"/></marker>';
     return d;
+  }
+
+  /* ---------------- 심볼 아이콘 ----------------
+     24×24 선 아이콘(직접 작성). 'c x y r' = 원, 그 밖은 path d. 상표 로고는 쓰지 않는다. */
+  var ICONS = {
+    terminal: ['M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', 'M7 10l3 2.5L7 15', 'M12.5 15H17'],
+    engine: ['c 12 12 3', 'M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1', 'c 12 12 6.5'],
+    server: ['M5 3h14a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z', 'M5 14h14a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1z', 'M8 6.5h.01M8 17.5h.01M12 6.5h4M12 17.5h4'],
+    database: ['M4 6c0 1.7 3.6 3 8 3s8-1.3 8-3-3.6-3-8-3-8 1.3-8 3z', 'M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6', 'M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3'],
+    cube: ['M12 2.5l8.5 4.75v9.5L12 21.5l-8.5-4.75v-9.5z', 'M3.5 7.25L12 12l8.5-4.75', 'M12 12v9.5'],
+    pod: ['c 12 12 9.5', 'M12 6.5l5 2.75v5.5L12 17.5l-5-2.75v-5.5z', 'M7 9.25L12 12l5-2.75', 'M12 12v5.5'],
+    package: ['M3 7.5l9-5 9 5v9l-9 5-9-5z', 'M3 7.5l9 5 9-5', 'M12 12.5v9', 'M7.5 5l9 5'],
+    layers: ['M12 2.5l9.5 4.75L12 12 2.5 7.25z', 'M2.5 12L12 16.75 21.5 12', 'M2.5 16.75L12 21.5l9.5-4.75'],
+    file: ['M14 2.5H6.5a2 2 0 0 0-2 2v15a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V8z', 'M14 2.5V8h5.5', 'M8 13h8M8 17h5'],
+    manifest: ['M9 2.5h6v3H9z', 'M9 4H6.5a1.5 1.5 0 0 0-1.5 1.5v14A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5v-14A1.5 1.5 0 0 0 17.5 4H15', 'M8.5 10.5h7M8.5 14h7M8.5 17.5h4'],
+    code: ['M8 6l-6 6 6 6', 'M16 6l6 6-6 6', 'M14 3.5l-4 17'],
+    network: ['c 12 5 2.5', 'c 5 19 2.5', 'c 19 19 2.5', 'M10.9 7.3l-4.8 9.4M13.1 7.3l4.8 9.4M7.5 19h9'],
+    globe: ['c 12 12 9', 'M3 12h18', 'M12 3c2.6 2.5 3.8 5.5 3.8 9s-1.2 6.5-3.8 9c-2.6-2.5-3.8-5.5-3.8-9S9.4 5.5 12 3z'],
+    lock: ['M6 11h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1z', 'M8 11V7.5a4 4 0 0 1 8 0V11', 'M12 15v2.5'],
+    key: ['c 7.5 15.5 4.5', 'M10.7 12.3L20.5 2.5', 'M16.5 6.5l3 3M14 9l2 2'],
+    shield: ['M12 2.5l8 3v6c0 5-3.4 9-8 10.5C7.4 20.5 4 16.5 4 11.5v-6z', 'M8.5 12l2.5 2.5 4.5-5'],
+    user: ['c 12 8 4', 'M4 21c0-4.4 3.6-7.5 8-7.5s8 3.1 8 7.5'],
+    cloud: ['M7 19h10.5a4.5 4.5 0 0 0 .6-9 6.5 6.5 0 0 0-12.6 1.6A3.8 3.8 0 0 0 7 19z'],
+    chip: ['M7 6h10a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z', 'M9.5 9.5h5v5h-5z', 'M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5'],
+    gpu: ['M3 6h18a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z', 'c 9 12 3.2', 'M15.5 10h3.5M15.5 14h3.5', 'M6 18v3M10 18v3'],
+    disk: ['M3 13.5l3-8.5h12l3 8.5', 'M3 13.5h18v5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z', 'M7 17h.01M11 17h2'],
+    folder: ['M3 6.5A1.5 1.5 0 0 1 4.5 5h5l2 2.5h8A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z'],
+    tag: ['M3 3h8.5l9.5 9.5-8.5 8.5L3 11.5z', 'M7.5 7.5h.01'],
+    branch: ['c 6 5 2.2', 'c 6 19 2.2', 'c 18 6 2.2', 'M6 7.2v9.6', 'M18 8.2v1.3a4.5 4.5 0 0 1-4.5 4.5H10a4 4 0 0 0-4 4'],
+    commit: ['c 12 12 3.8', 'M2 12h6.2M15.8 12H22'],
+    merge: ['c 6 5 2.2', 'c 6 19 2.2', 'c 18 15 2.2', 'M6 7.2v9.6', 'M6 7.2c0 4.5 4 7.8 9.8 7.8'],
+    pr: ['c 6 5 2.2', 'c 6 19 2.2', 'c 18 19 2.2', 'M6 7.2v9.6', 'M18 16.8V9.5a3 3 0 0 0-3-3h-4', 'M13 4l-2.5 2.5L13 9'],
+    play: ['c 12 12 9.5', 'M10 8.3l5.5 3.7-5.5 3.7z'],
+    rocket: ['M12.5 15.5l-4-4c1.4-4.6 5.2-8 11-9-.9 5.8-4.4 9.6-7 13z', 'M8.5 11.5H5l2-4h4.5', 'M12.5 15.5V19l4-2v-4.5', 'M7 17c-1.6.4-2.6 1.7-3 4 2.3-.4 3.6-1.4 4-3'],
+    sync: ['M20 11a8 8 0 0 0-14.7-4.4', 'M4.5 3v4h4', 'M4 13a8 8 0 0 0 14.7 4.4', 'M19.5 21v-4h-4'],
+    undo: ['M9 14.5l-5-5 5-5', 'M4 9.5h10.5a5.5 5.5 0 0 1 0 11H10'],
+    clock: ['c 12 12 9.5', 'M12 7v5l3.5 2'],
+    bell: ['M6 16.5V11a6 6 0 0 1 12 0v5.5l2 2H4z', 'M10 20.5a2 2 0 0 0 4 0'],
+    mute: ['M7 9.5A5 5 0 0 1 16 8', 'M18 12v4.5l2 2H8', 'M6 11v5.5l-2 2', 'M10 20.5a2 2 0 0 0 4 0', 'M3 3l18 18'],
+    chart: ['M3.5 3v17.5H21', 'M7 15l4-5 3 3 6-7'],
+    bars: ['M3 21h18', 'M6 17.5v-5M11 17.5v-11M16 17.5v-8M20.5 17.5v-3'],
+    gauge: ['M4 18.5a9 9 0 1 1 16 0', 'c 12 14 1.6', 'M13.2 12.8L17 9'],
+    eye: ['M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z', 'c 12 12 3'],
+    search: ['c 10.5 10.5 6.5', 'M15.5 15.5L21 21'],
+    filter: ['M3 4h18l-7 8.5V19l-4 2v-8.5z'],
+    log: ['M5.5 3h13a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z', 'M8 8h8M8 12h8M8 16h5'],
+    route: ['M3 12h6l4-6h7.5', 'M9 12l4 6h7.5', 'M17.5 3l3 3-3 3', 'M17.5 15l3 3-3 3'],
+    link: ['M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1', 'M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1'],
+    plug: ['M9 2.5v4.5M15 2.5v4.5', 'M6 7h12v3.5a6 6 0 0 1-12 0z', 'M12 16.5v5'],
+    api: ['M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z', 'M8 10l-2 2 2 2M16 10l2 2-2 2M13 9l-2 6'],
+    check: ['M8.5 11l3 3 8.5-8.5', 'M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'],
+    bug: ['M8 9a4 4 0 0 1 8 0v6a4 4 0 0 1-8 0z', 'M12 9v10', 'M3.5 10H8M16 10h4.5M3.5 16H8M16 16h4.5', 'M9.5 5.5L7.5 3M14.5 5.5l2-2.5'],
+    balance: ['c 12 4.5 2.3', 'c 5 19 2.3', 'c 12 19 2.3', 'c 19 19 2.3', 'M12 6.8v9.9M11 6.6L6 16.8M13 6.6l5 10.2'],
+    door: ['M4 21V3h11v18', 'M2.5 21h15', 'M15 12h6.5', 'M18.5 9l3 3-3 3', 'M11.5 12h.01'],
+    copy: ['M10 8h10a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H10a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z', 'M16 8V5a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v11a1 1 0 0 0 1 1h5'],
+    scale: ['M3.5 9V3.5H9M20.5 9V3.5H15M3.5 15v5.5H9M20.5 15v5.5H15', 'M9.5 9.5h5v5h-5z'],
+    sliders: ['M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0', 'c 16 6 2', 'c 10 12 2', 'c 18 18 2'],
+    trash: ['M4 7h16', 'M9 7V4h6v3', 'M6 7l1 13.5h10L18 7', 'M10 11v6M14 11v6'],
+    send: ['M21.5 2.5L10.5 13.5', 'M21.5 2.5l-7 19-4-8-8-4z'],
+    chat: ['M21 12a8.5 8.5 0 0 1-12.3 7.6L3 21l1.6-5.4A8.5 8.5 0 1 1 21 12z', 'M8 12h.01M12 12h.01M16 12h.01'],
+    workflow: ['M3.5 3h7v6h-7z', 'M13.5 15h7v6h-7z', 'M7 9v4a2 2 0 0 0 2 2h4.5'],
+    pipe: ['c 4 12 2.2', 'c 12 12 2.2', 'c 20 12 2.2', 'M6.2 12h3.6M14.2 12h3.6'],
+    list: ['M9 6h12M9 12h12M9 18h12', 'M4 6h.01M4 12h.01M4 18h.01'],
+    upload: ['M12 16V3.5', 'M7 8.5l5-5 5 5', 'M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4'],
+    download: ['M12 3.5V16', 'M7 11l5 5 5-5', 'M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4'],
+    build: ['M14.5 3l6.5 6.5-3 3L11.5 6z', 'M13 7.5L3.5 17v3.5H7l9.5-9.5'],
+    target: ['c 12 12 9.5', 'c 12 12 5.5', 'c 12 12 1.5'],
+    pulse: ['M2.5 12h4.5l3-7 4 14 3-7h4.5'],
+    brace: ['M8 3H7a2 2 0 0 0-2 2v4.5A2.5 2.5 0 0 1 2.5 12 2.5 2.5 0 0 1 5 14.5V19a2 2 0 0 0 2 2h1', 'M16 3h1a2 2 0 0 1 2 2v4.5a2.5 2.5 0 0 0 2.5 2.5 2.5 2.5 0 0 0-2.5 2.5V19a2 2 0 0 1-2 2h-1'],
+    panel: ['M4 3h16a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z', 'M3 10h18M10 10v11'],
+    hourglass: ['M6 3h12M6 21h12', 'M7 3v2.5a5 5 0 0 0 10 0V3', 'M7 21v-2.5a5 5 0 0 1 10 0V21'],
+    group: ['M3.5 3.5h7v7h-7zM13.5 3.5h7v7h-7zM3.5 13.5h7v7h-7zM13.5 13.5h7v7h-7z'],
+    scope: ['M3 7.5V3h4.5M16.5 3H21v4.5M21 16.5V21h-4.5M7.5 21H3v-4.5', 'M8.5 8.5h7v7h-7z'],
+    flag: ['M5 21.5V3', 'M5 4h12l-2.5 4.5L17 13H5'],
+    robot: ['M6 8h12a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z', 'M12 4.5V8', 'c 12 3.5 1.2', 'M9 13h.01M15 13h.01M9.5 16.5h5'],
+    toggle: ['M7 7h10a5 5 0 0 1 0 10H7A5 5 0 0 1 7 7z', 'c 16.5 12 2.8'],
+    star: ['M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z'],
+    history: ['M3.5 12a8.5 8.5 0 1 0 2.5-6', 'M3 3.5V8h4.5', 'M12 7.5V12l3 2'],
+    wave: ['M2 9c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5 0', 'M2 15c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5 0']
+  };
+
+  function iconOf(id) {
+    var d = state.nodes[id] && state.nodes[id].data;
+    var name = (d && d.icon) || (state.icons && state.icons[id]);
+    return ICONS[name] ? name : (state.nodes[id] && state.nodes[id].childIds.length ? 'layers' : 'cube');
+  }
+
+  // 아이콘을 (cx, cy) 중심, 한 변 size 픽셀로 그린다.
+  function drawIcon(parent, name, cx, cy, size, cls) {
+    var parts = ICONS[name] || ICONS.cube, k = size / 24;
+    var g = svg('g', { class: cls || 'ico', transform: 'translate(' + (cx - size / 2).toFixed(1) + ' ' + (cy - size / 2).toFixed(1) + ') scale(' + k.toFixed(3) + ')' });
+    parts.forEach(function (p) {
+      if (p.charAt(0) === 'c') { var a = p.split(' '); g.appendChild(svg('circle', { cx: a[1], cy: a[2], r: a[3] })); }
+      else g.appendChild(svg('path', { d: p }));
+    });
+    parent.appendChild(g);
+    return g;
+  }
+
+  // 라벨용 작은 인라인 아이콘
+  function iconEl(name) {
+    var s = svg('svg', { viewBox: '0 0 24 24', class: 'lbl-ico', 'aria-hidden': 'true', focusable: 'false' });
+    (ICONS[name] || ICONS.cube).forEach(function (p) {
+      if (p.charAt(0) === 'c') { var a = p.split(' '); s.appendChild(svg('circle', { cx: a[1], cy: a[2], r: a[3] })); }
+      else s.appendChild(svg('path', { d: p }));
+    });
+    return s;
+  }
+
+  function hexPts(cx, cy, r) {
+    var out = [];
+    for (var i = 0; i < 6; i++) { var a = Math.PI / 3 * i - Math.PI / 2; out.push([cx + Math.cos(a) * r, cy + Math.sin(a) * r]); }
+    return out;
+  }
+
+  // 심볼 토큰: 바닥 그림자 + (하위가 있으면 뒤로 겹친 육각형) + 육각 배지 + 아이콘.
+  // 바닥 접점 (bx, by)에서 위로 서 있는 모양. 하위 항목이 있으면 겹친 판으로 "안에 더 있음"을 모양으로 알린다.
+  function symbolToken(parent, bx, by, r, id, opts) {
+    var g = svg('g', { class: 'blk tok' + (opts.cls ? ' ' + opts.cls : ''), 'data-key': opts.key || id });
+    g.appendChild(svg('ellipse', { cx: bx, cy: by, rx: r * 0.95, ry: r * 0.32, class: 'tok-shadow' }));
+    var lift = svg('g', { class: 'lift' });
+    g.appendChild(lift);
+    var cx = bx, cy = by - r * 1.08;
+    var stack = Math.min(opts.kids || 0, 2);
+    for (var s = stack; s >= 1; s--) poly(lift, hexPts(cx + s * r * 0.16, cy - s * r * 0.16, r), 'hx-back');
+    poly(lift, hexPts(cx, cy, r), 'hx');
+    poly(lift, hexPts(cx, cy, r * 0.84), 'hx-in');
+    drawIcon(lift, iconOf(id), cx, cy, r * 1.0, 'ico');
+    if (opts.num) {
+      var nr = Math.max(8, Math.min(11, r * 0.34)), nx = cx + r * 0.78, ny = cy - r * 0.72;
+      lift.appendChild(svg('circle', { cx: nx, cy: ny, r: nr, class: 'num-bg' }));
+      var t = svg('text', { x: nx, y: ny, class: 'num-tx', 'text-anchor': 'middle', 'dominant-baseline': 'central', 'font-size': Math.round(nr * 1.05) });
+      t.textContent = String(opts.num);
+      lift.appendChild(t);
+    }
+    parent.appendChild(g);
+    return { g: g, top: [cx + r * 0.87, cy - r * 0.5], center: [cx, cy] };
   }
 
   /* ---------------- 라벨 배치 ---------------- */
@@ -420,6 +516,7 @@
     var d = state.nodes[id].data, kids = state.nodes[id].childIds.length;
     return [
       opts.num ? el('span', { class: 'lbl-num', 'aria-hidden': 'true', text: pad2(opts.num) }) : null,
+      iconEl(iconOf(id)),
       el('span', { class: 'lbl-text' }, [
         d.en ? el('span', { class: 'lbl-en', text: d.en }) : null,
         el('span', { class: 'lbl-ko', text: d.label }),
@@ -449,7 +546,7 @@
     var model = layered ? layerModel(items) : boardModel(items);
     var all = [];
     model.boxes.forEach(function (b) { all = all.concat(boxCorners(b)); });
-    var P = fit(all, R, layered ? 15 : 18);
+    var P = fit(all, R, layered ? 15 : 13);
 
     var base = svg('g', { class: 'scene-base' }), blocks = svg('g', { class: 'scene-blocks' }), lines = svg('g', { class: 'scene-lines' });
     ctx.sv.appendChild(base); ctx.sv.appendChild(lines); ctx.sv.appendChild(blocks);
@@ -465,7 +562,7 @@
 
   // 상위 영역: 분해도처럼 위아래로 띄운 레이어(첫 항목이 맨 위).
   function layerModel(items) {
-    var SW = 24, SD = 15, ST = 1.4, GAP = 7.5, n = items.length;
+    var SW = 24, SD = 15, ST = 1.4, GAP = 10.5, n = items.length;
     var boxes = items.map(function (id, i) { return { x: 0, y: 0, z: (n - 1 - i) * GAP, w: SW, d: SD, h: ST, id: id }; });
     return {
       boxes: boxes,
@@ -498,7 +595,18 @@
             minis.push({ x: 3 + c * cwid + (cwid - fp) / 2, y: 2.5 + r * cdep + (cdep - fp) / 2, z: t, w: fp, d: fp, h: state.nodes[kids[q]].childIds.length ? 1.6 : 0.9, kid: kids[q] });
           }
           minis.sort(function (a, b2) { return (a.x + a.y) - (b2.x + b2.y); });
-          minis.forEach(function (mb) { drawBox(lift, P, mb, 'm-'); });
+          minis.forEach(function (mb) {
+            var foot = I(mb.x + mb.w / 2, mb.y + mb.d / 2, t), mr = Math.max(7, Math.min(20, fp * P.s * 0.62));
+            lift.appendChild(svg('ellipse', { cx: foot[0], cy: foot[1], rx: mr * 0.9, ry: mr * 0.3, class: 'tok-shadow' }));
+            var my = foot[1] - mr * 1.05;
+            if (state.nodes[mb.kid].childIds.length) poly(lift, hexPts(foot[0] + mr * 0.16, my - mr * 0.16, mr), 'm-hx-back');
+            poly(lift, hexPts(foot[0], my, mr), 'm-hx');
+            if (mr >= 9) drawIcon(lift, iconOf(mb.kid), foot[0], my, mr * 1.05, 'm-ico');
+          });
+          // 레이어 자신의 심볼(앞쪽 모서리 엠블럼)
+          var em = I(0, SD, b.z + ST * 0.5), er = Math.max(11, Math.min(20, P.s * 1.25));
+          poly(lift, hexPts(em[0], em[1], er), 'hx');
+          drawIcon(lift, iconOf(id), em[0], em[1], er * 1.05, 'ico');
           if (grid) marker(lift, P, { x: 0, y: 0, z: b.z, w: SW, d: SD, h: ST }, j + 1);
           layer.appendChild(g);
           var a = I(SW, 0, b.z + ST);
@@ -517,12 +625,11 @@
     var blocks = items.map(function (id, i) {
       var r = Math.floor(i / cols), inRow = Math.min(cols, n - r * cols), c = i % cols;
       var off = (cols - inRow) * CELL / 2;
-      var kids = state.nodes[id].childIds.length;
-      var fp = kids ? 6.4 : 5.4, h = kids ? 2.4 + Math.min(kids, 5) * 0.45 : 1.7;
-      return { x: PAD + off + c * CELL + (CELL - fp) / 2, y: PAD + r * CELL + (CELL - fp) / 2, z: BT, w: fp, d: fp, h: h, id: id, kids: kids, idx: i };
+      var kids = state.nodes[id].childIds.length, fp = 6;
+      return { x: PAD + off + c * CELL + (CELL - fp) / 2, y: PAD + r * CELL + (CELL - fp) / 2, z: BT, w: fp, d: fp, h: 7.5, id: id, kids: kids, idx: i };
     });
     return {
-      boxes: [board].concat(blocks.map(function (b) { return { x: b.x, y: b.y, z: b.z, w: b.w, d: b.d, h: b.h + 1.2 }; })),
+      boxes: [board].concat(blocks.map(function (b) { return { x: b.x, y: b.y, z: b.z, w: b.w, d: b.d, h: b.h }; })),
       draw: function (base, layer, P, grid) {
         var I = P.I;
         var bg = svg('g', { class: 'board' });
@@ -538,13 +645,17 @@
         }
         base.appendChild(bg);
         var entries = [];
-        blocks.slice().sort(function (p, q) { return (p.x + p.y) - (q.x + q.y); }).forEach(function (b) {
-          makeBlock(layer, P, b, b.id, { kids: b.kids, num: grid ? b.idx + 1 : 0 });
-        });
+        var r = Math.max(14, Math.min(46, CELL * P.s * 0.3)), tops = {};
         blocks.forEach(function (b) {
-          var a = I(b.x + b.w / 2, b.y + b.d / 2, b.z + b.h);
-          entries.push({ key: b.id, ax: a[0], ay: a[1] });
+          var c0 = I(b.x + b.w / 2, b.y + b.d / 2, BT);
+          // 바닥 소켓(보드에 꽂힌 자리)
+          poly(bg, [I(b.x, b.y, BT), I(b.x + b.w, b.y, BT), I(b.x + b.w, b.y + b.d, BT), I(b.x, b.y + b.d, BT)], 'socket');
+          b.foot = c0;
         });
+        blocks.slice().sort(function (p, q) { return (p.x + p.y) - (q.x + q.y); }).forEach(function (b) {
+          tops[b.id] = symbolToken(layer, b.foot[0], b.foot[1], r, b.id, { kids: b.kids, num: grid ? b.idx + 1 : 0 }).top;
+        });
+        blocks.forEach(function (b) { entries.push({ key: b.id, ax: tops[b.id][0], ay: tops[b.id][1] }); });
         return entries;
       }
     };
@@ -571,12 +682,12 @@
       return lb;
     });
     var R, g;
-    if (grid) { g = measureGrid(labels, ctx.W); R = gridRegion(ctx, g, 230); }
+    if (grid) { g = measureGrid(labels, ctx.W); R = gridRegion(ctx, g, 300); }
     else R = { x: 40, y: 92, w: ctx.W - 80, h: ctx.H - 120 };
     sizeSvg(ctx);
 
     var all = boxCorners(board);
-    pos.forEach(function (p) { all = all.concat(boxCorners({ x: p.x, y: p.y, z: p.z, w: p.w, d: p.d, h: p.h + 1.5 })); });
+    pos.forEach(function (p) { all = all.concat(boxCorners({ x: p.x, y: p.y, z: p.z, w: p.w, d: p.d, h: 7.5 })); });
     var P = fit(all, R, 13), I = P.I;
 
     var base = svg('g', { class: 'board' });
@@ -593,14 +704,20 @@
     }
     var layer = svg('g', { class: 'scene-blocks' });
     ctx.sv.appendChild(layer);
+    var tr = Math.max(15, Math.min(40, SP * P.s * 0.28)), heads = [];
+    pos.forEach(function (p) {
+      poly(base, [I(p.x, p.y, BT), I(p.x + FP, p.y, BT), I(p.x + FP, p.y + FP, BT), I(p.x, p.y + FP, BT)], 'socket');
+    });
     pos.slice().sort(function (p, q) { return (p.x + p.y) - (q.x + q.y); }).forEach(function (p) {
-      makeBlock(layer, P, p, 's' + p.i, { cls: 'step', num: p.i + 1, motifId: f.steps[p.i].node });
+      var foot = I(p.x + FP / 2, p.y + FP / 2, BT);
+      heads[p.i] = foot[1] - tr * 2.3;
+      symbolToken(layer, foot[0], foot[1], tr, f.steps[p.i].node, { key: 's' + p.i, cls: 'step', num: p.i + 1 });
     });
 
     if (!grid) {
       var rects = [];
       for (var j = 0; j < n; j++) {
-        var l = labels[j], p = pos[j], top = I(p.x + FP / 2, p.y + FP / 2, p.z + p.h);
+        var l = labels[j], p = pos[j], top = I(p.x + FP / 2, p.y + FP / 2, BT); top[1] = heads[j] + 26;
         l.style.maxWidth = '150px';
         var w = l.offsetWidth, h = l.offsetHeight;
         var x = Math.max(8, Math.min(ctx.W - 8 - w, top[0] - w / 2)), y = top[1] - 34 - h;
@@ -618,7 +735,36 @@
   }
 
   /* ---------------- 상태 반영 ---------------- */
+  var lastScene = null, lastCap = null;
+  function reduceMotion() { return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+
+  // 이전 장면을 복제해 겹쳐 두고 흐리게 사라지게 한다(복제본은 조작·보조기술에서 제외).
+  function ghostOut() {
+    var stage = $('stage'), sv = $('scene'), lb = $('stage-labels');
+    if (!sv.firstChild) return;
+    Array.prototype.forEach.call(stage.querySelectorAll('.scene-ghost'), function (n) { n.remove(); });
+    var gh = el('div', { class: 'scene-ghost', 'aria-hidden': 'true' });
+    var s2 = sv.cloneNode(true), l2 = lb.cloneNode(true);
+    [s2, l2].forEach(function (n) {
+      n.removeAttribute('id');
+      Array.prototype.forEach.call(n.querySelectorAll('[id],[data-key],defs'), function (x) {
+        if (x.tagName.toLowerCase() === 'defs') x.remove(); else { x.removeAttribute('id'); x.removeAttribute('data-key'); }
+      });
+      Array.prototype.forEach.call(n.querySelectorAll('button,a,[tabindex]'), function (x) { x.setAttribute('tabindex', '-1'); });
+    });
+    gh.appendChild(s2); gh.appendChild(l2);
+    if ('inert' in gh) gh.inert = true;
+    stage.appendChild(gh);
+    setTimeout(function () { if (gh.parentNode) gh.remove(); }, 420);
+  }
+
+  function enter(n, cls) { n.classList.remove(cls); void n.getBoundingClientRect(); n.classList.add(cls); }
+
   function render() {
+    var sceneKey = state.mode + '|' + (state.mode === 'flow' ? state.flowIndex : state.viewId);
+    var changed = lastScene !== null && sceneKey !== lastScene;
+    if (changed && !reduceMotion()) safe('장면 전환', ghostOut);
+    lastScene = sceneKey;
     // 상단·하단을 먼저 채워 무대 크기를 확정한 뒤 장면을 그린다
     safe('상단 표시', updateTop);
     safe('설명 표시', updateCaption);
@@ -627,6 +773,7 @@
       focusKey = focusKey ? focusKey.getAttribute('data-key') : null;
       $('stage').setAttribute('data-mode', state.mode);
       if (state.mode === 'flow') renderFlow(false); else renderExplore(false);
+      if (changed) { enter($('scene'), 'scene-in'); enter($('stage-labels'), 'scene-in'); }
       if (focusKey) focusLabel(focusKey);
     });
     safe('구조 목록 동기화', updateOutline);
@@ -795,6 +942,9 @@
 
   function updateCaption() {
     var box = $('caption-body');
+    var ck = state.mode + '|' + state.viewId + '|' + state.selId + '|' + state.flowIndex + '|' + (state.mode === 'flow' ? state.step : '');
+    if (lastCap !== null && ck !== lastCap) enter(box, 'cap-in');
+    lastCap = ck;
     box.textContent = '';
     if (state.mode === 'flow') {
       var f = currentFlow();
@@ -1213,6 +1363,14 @@
     safe('구조 검증', function () {
       validateTree(data.tree, data.examples);
       Object.keys(data.examples || {}).forEach(function (k) { if (!state.nodes[k]) warn('예시(examples)의 "' + k + '"에 해당하는 노드가 없습니다.'); });
+    });
+    safe('심볼 검증', function () {
+      state.icons = {};
+      Object.keys(data.icons || {}).forEach(function (k) {
+        if (!state.nodes[k]) warn('심볼(icons)의 "' + k + '"에 해당하는 노드가 없습니다.');
+        else if (!ICONS[data.icons[k]]) warn('"' + k + '"의 심볼 이름 "' + data.icons[k] + '"을 찾을 수 없어 기본 심볼로 표시합니다.');
+        else state.icons[k] = data.icons[k];
+      });
     });
     safe('흐름 검증', function () { validateFlows(data.flows); });
     safe('용어 검증', function () { validateTerms(data.terms); });

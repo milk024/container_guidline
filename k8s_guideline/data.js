@@ -292,6 +292,19 @@ window.GUIDE_DATA = {
     }
   ],
 
+  // 장면에서 각 항목을 나타내는 심볼(엔진 script.js의 ICONS 이름)
+  icons: {
+    "kubectl": "terminal", "kubeconfig": "key", "kustomize": "manifest", "cluster": "globe", "cp": "engine", "apiserver": "api",
+    "etcd": "database", "scheduler": "clock", "taint": "shield", "affinity": "target", "ctrlmgr": "sync", "node": "server",
+    "kubelet": "robot", "staticpod": "file", "runtime": "cube", "kubeproxy": "route", "pod": "pod", "container": "cube",
+    "probe": "pulse", "resources": "gauge", "addons": "plug", "cni": "network", "coredns": "search", "objects": "list",
+    "namespace": "scope", "labels": "tag", "workloads": "workflow", "deployment": "rocket", "replicaset": "copy", "statefulset": "database",
+    "daemonset": "server", "job": "clock", "hpa": "scale", "networking": "network", "service": "balance", "clusterip": "link",
+    "nodeport": "door", "lb": "balance", "ingress": "door", "gateway": "route", "netpol": "shield", "config": "sliders",
+    "storage": "disk", "pvc": "disk", "storageclass": "layers", "access": "lock", "rbac": "user", "serviceaccount": "robot",
+    "crd": "brace"
+  },
+
   flows: [
     {
       id: 'create', title: 'Deployment로 Pod가 실행되는 흐름', src: ['components', 'controller', 'scheduler'],

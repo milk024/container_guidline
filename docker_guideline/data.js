@@ -183,6 +183,17 @@ window.GUIDE_DATA = {
     "repository": {"v": "library/nginx", "lang": "text", "code": "$ docker image ls registry.example.com/team/myapp\nREPOSITORY                        TAG\nregistry.example.com/team/myapp   1.0\nregistry.example.com/team/myapp   1.1\n# 같은 Repository 안에서 Tag 로 버전을 구분"}
   },
 
+  // 장면에서 각 항목을 나타내는 심볼(엔진 script.js의 ICONS 이름)
+  icons: {
+    "platform": "layers", "client": "terminal", "cli": "terminal", "dockerfile": "file", "df-from": "layers", "df-copy": "copy",
+    "df-run": "play", "multistage": "workflow", "df-health": "pulse", "df-cmd": "play", "compose": "manifest", "daemon": "engine",
+    "buildkit": "build", "containerd": "server", "runc": "chip", "images": "layers", "layer": "layers", "tag": "tag",
+    "storagedrv": "disk", "containers": "cube", "namespaces": "scope", "cgroups": "gauge", "restart": "sync", "logs": "log",
+    "networks": "network", "bridge": "link", "host": "server", "overlay": "globe", "ports": "door", "none": "lock",
+    "dns": "search", "volumes": "database", "volume": "disk", "bindmount": "folder", "tmpfs": "chip", "registryRoot": "cloud",
+    "hub": "cloud", "repository": "folder"
+  },
+
   flows: [
     {
       id: 'run', title: 'docker run 실행 흐름', src: ['overview', 'run'],

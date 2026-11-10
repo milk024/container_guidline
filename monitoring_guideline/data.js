@@ -286,6 +286,18 @@ window.GUIDE_DATA = {
     }
   ],
 
+  // 장면에서 각 항목을 나타내는 심볼(엔진 script.js의 ICONS 이름)
+  icons: {
+    "stack": "layers", "targets": "target", "nodeexp": "server", "cadvisor": "cube", "ksm": "list", "appmetrics": "pulse",
+    "counter": "bars", "gauge": "gauge", "histogram": "bars", "summary": "list", "dcgm": "gpu", "containerlogs": "log",
+    "collect": "download", "servicemonitor": "eye", "podmonitor": "pod", "scrape": "download", "sd": "search", "relabel": "tag",
+    "fluentbit": "filter", "fbtail": "log", "fbk8s": "filter", "fbloki": "send", "metricsserver": "gauge", "store": "database",
+    "tsdb": "database", "wal": "file", "remotewrite": "upload", "thanos": "cloud", "loki": "database", "lokilabels": "tag",
+    "visualize": "chart", "promql": "search", "rate": "chart", "hquantile": "bars", "recording": "history", "logql": "search",
+    "grafana": "panel", "datasource": "plug", "panel": "chart", "variable": "brace", "alert": "bell", "rule": "file",
+    "alertstate": "hourglass", "alertmanager": "bell", "grouping": "group", "route": "route", "silence": "mute", "receiver": "chat"
+  },
+
   flows: [
     {
       id: 'metrics', title: '메트릭 흐름 (수집 대상 → 시각화)', src: ['prom-overview', 'operator'],
