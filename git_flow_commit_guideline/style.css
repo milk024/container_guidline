@@ -431,7 +431,15 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 /* 예시 코드 */
 .cap-ex { margin: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #050508; }
 .cap-ex-h { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--line); font: 600 11px/1.4 var(--mono); color: var(--muted); }
+.cap-ex-h { align-items: center; }
 .cap-ex-lang { color: var(--lav-2); }
+.cap-ex-r { display: inline-flex; align-items: center; gap: 8px; }
+/* 예시 복사 버튼 */
+.copy-btn { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border: 1px solid var(--line-2); border-radius: 6px; background: rgba(255, 255, 255, .03); color: var(--muted); font: 600 10.5px/1 var(--mono); cursor: pointer; transition: color .2s, border-color .2s, background .2s; }
+.copy-btn svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.copy-btn:hover { color: var(--text); border-color: var(--lav-3); }
+.copy-btn:focus-visible { outline: 2px solid var(--lav); outline-offset: 2px; }
+.copy-btn.is-done { color: var(--lav); border-color: var(--lav-3); background: var(--lav-a); }
 .ex-code, .pr-code { margin: 0; padding: 12px 14px; overflow-x: auto; font: 12.5px/1.65 var(--mono); color: #dcdbe4; white-space: pre; tab-size: 2; }
 .ex-mark { background: var(--lav-a); color: var(--lav-hi); border-radius: 3px; }
 .ex-n { margin-right: 4px; font-size: 10px; color: var(--lav); }
@@ -458,6 +466,8 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .pr-bar { display: flex; align-items: center; gap: 5px; padding: 7px 10px; border-bottom: 1px solid var(--line); }
 .pr-bar i { width: 8px; height: 8px; border-radius: 50%; background: var(--line-2); }
 .pr-bar span { margin-left: auto; font: 600 10.5px/1 var(--mono); color: var(--lav-2); }
+.pr-bar .copy-btn { margin-left: 8px; }
+.pr-bar .copy-btn span { margin-left: 0; color: inherit; font: inherit; }
 .pr-code { max-height: 220px; overflow: auto; }
 .pr-text { margin: 10px 0 0; font-size: 13px; line-height: 1.7; color: var(--soft); }
 .pr-text b { color: var(--text); }

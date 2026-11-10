@@ -441,7 +441,10 @@
     return el('figure', { class: 'cap-ex' }, [
       el('figcaption', { class: 'cap-ex-h' }, [
         el('span', { text: heading }),
-        ex.lang ? el('span', { class: 'cap-ex-lang', text: ex.lang }) : null
+        el('span', { class: 'cap-ex-r' }, [
+          ex.lang ? el('span', { class: 'cap-ex-lang', text: ex.lang }) : null,
+          copyBtn(code, heading)
+        ])
       ]),
       pre
     ]);
@@ -588,6 +591,39 @@
   // 애니메이션은 항상 켜 둔다(끄는 버튼·설정 없음)
   function motionOff() { return false; }
   function later(fn, ms) { if (motionOff()) fn(); else setTimeout(fn, ms); }
+
+  /* ---------------- 복사 버튼 ----------------
+     예시 코드를 그대로(번호 표시 없이) 클립보드에 넣는다. 클립보드 API가 막힌 환경(file:// 등)은 textarea 방식으로 대신한다. */
+  var COPY_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>';
+  var DONE_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  function copyText(text, done) {
+    function legacy() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-1000px'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      done(ok);
+    }
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(text).then(function () { done(true); }, legacy);
+    else legacy();
+  }
+  function copyBtn(text, what) {
+    var label = (what ? what + ' ' : '') + '복사';
+    var b = el('button', { type: 'button', class: 'copy-btn', 'aria-label': label, title: '복사' });
+    b.innerHTML = COPY_ICO + '<span class="copy-t">복사</span>';
+    b.addEventListener('click', function (e) {
+      e.stopPropagation();
+      copyText(text, function (ok) {
+        b.classList.toggle('is-done', ok);
+        b.innerHTML = (ok ? DONE_ICO : COPY_ICO) + '<span class="copy-t">' + (ok ? '복사됨' : '실패') + '</span>';
+        b.setAttribute('aria-label', ok ? '복사했습니다' : '복사하지 못했습니다');
+        clearTimeout(b._t);
+        b._t = setTimeout(function () { b.classList.remove('is-done'); b.innerHTML = COPY_ICO + '<span class="copy-t">복사</span>'; b.setAttribute('aria-label', label); }, 1600);
+      });
+    });
+    return b;
+  }
 
   /* ---------------- 등각 도구 ----------------
      2:1 등각 투영. (sx, sy) = 바닥 중심의 화면 좌표, (x, y, z) = 그 점에서의 등각 좌표. */
@@ -1639,7 +1675,7 @@
       return el('button', { type: 'button', class: 'pr-chip' + (k === i ? ' is-on' : ''), 'data-pr': k, 'aria-current': k === i ? 'step' : null, text: (k + 1) + ' ' + nd(o.step).label });
     })));
     var screen = el('div', { class: 'pr-screen' }, [
-      el('div', { class: 'pr-bar', 'aria-hidden': 'true' }, [el('i'), el('i'), el('i'), el('span', { text: d.ex.lang || 'example' })]),
+      el('div', { class: 'pr-bar' }, [el('i', { 'aria-hidden': 'true' }), el('i', { 'aria-hidden': 'true' }), el('i', { 'aria-hidden': 'true' }), el('span', { 'aria-hidden': 'true', text: d.ex.lang || 'example' }), copyBtn(d.ex.code, d.label + ' 예시 코드')]),
       el('pre', { class: 'pr-code', tabindex: '0', 'aria-label': d.label + ' 예시 코드', text: d.ex.code })
     ]);
     body.appendChild(screen);
