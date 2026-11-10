@@ -48,7 +48,7 @@ window.GUIDE_SCENE = {
     K.cyl(am, 790, 444, 24, 34);
     K.cyl(am, 790, 444, 6, 8, '', 34);
     K.icon(al, K.iconOf('alert'), 790, 372, 30);
-    K.label('alert', [810, 390], [900, 470], 'r');
+    K.label('alert', [804, 424], [900, 470], 'r');
     return { viewBox: [1000, 640] };
   }
 };

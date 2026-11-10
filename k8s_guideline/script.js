@@ -691,7 +691,9 @@
     var slabG = vid ? K.part(vid, 'slab') : K.g(null, 'slab-deco');
     var slab = K.box(slabG, CX, CY, W, D, slabH, 'slab-bx');
     var tp = isoP(CX, CY, 0, D / 2 - 15, 0);
-    if (vid) K.topText(slabG, enOf(vid), tp[0], tp[1], slabH, 13, 'slab-tx');
+    if (vid) {
+      K.topText(slabG, enOf(vid), tp[0], tp[1], slabH, 13, 'slab-tx');
+    }
     else K.topText(slabG, (state.guide ? state.guide.en : ''), tp[0], tp[1], slabH, 13, 'slab-tx');
     var cells = items.map(function (id, i) {
       var r = Math.floor(i / cols), c = i % cols;
@@ -713,6 +715,11 @@
       var lx = side === 'l' ? Math.min(base[0] - 70, CX - W / 2 - D / 2 + 60) : Math.max(base[0] + 70, CX + W / 2 + D / 2 - 60);
       K.label(c.id, [b.top[0], b.top[1]], [lx, b.top[1] - 26], side);
     });
+    // 지금 들어와 있는 영역(판) 자신의 라벨(하위 다음 번호): 점은 판 윗면 오른쪽 모서리 안쪽에 찍는다
+    if (vid) {
+      var sa = isoP(CX, CY, W / 2 - 18, -D / 2 + 18, slabH);
+      K.label(vid, sa, [sa[0] + 70, sa[1] - 34], 'r');
+    }
     return { viewBox: [1000, 640] };
   }
 
@@ -756,7 +763,7 @@
     Object.keys(K.parts).forEach(function (id) {
       if (K.labels.some(function (l) { return l.id === id; })) return;
       var bb = K.parts[id].getBBox();
-      K.labels.push({ id: id, anchor: [bb.x + bb.width / 2, bb.y + 4], at: [bb.x + bb.width + 30, bb.y - 10], side: 'r' });
+      K.labels.push({ id: id, anchor: [bb.x + bb.width / 2, bb.y + bb.height / 2], at: [bb.x + bb.width + 30, bb.y - 10], side: 'r' });
     });
     $('stage').classList.toggle('is-root', !state.viewId);
     buildLabels();
