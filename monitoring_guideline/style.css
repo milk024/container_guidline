@@ -153,6 +153,12 @@ button.crumb:hover { color: var(--acc-2); }
 .blk.is-hot .hx-back, .blk.is-sel .hx-back { stroke: var(--acc-2); }
 .blk.is-hot .ico path, .blk.is-hot .ico circle, .blk.is-sel .ico path, .blk.is-sel .ico circle { stroke: #fff; }
 .blk.is-hot .m-hx { stroke: var(--acc-3); }
+/* 공식 아이콘·로고: 원본 색이 그대로 보이도록 밝은 판 위에 놓는다(선택 표시는 테두리 점선으로 유지) */
+.hx.hx-logo, .blk.is-hot .hx.hx-logo, .blk.is-sel .hx.hx-logo, .step.is-done .hx.hx-logo, .step.is-cur .hx.hx-logo { fill: #eef1fa; }
+.blk.is-hot .hx.hx-logo { stroke: #fff; stroke-width: 2.4; }
+.m-hx.m-hx-logo { fill: #e6eaf6; }
+.logo { pointer-events: none; }
+.step.is-next .hx.hx-logo { fill: #c9cfe3; }
 .blk.is-hot .m-ico path, .blk.is-hot .m-ico circle { stroke: var(--acc-3); }
 
 .leader path { fill: none; stroke: rgba(167, 139, 250, .38); stroke-width: 1; }
@@ -199,6 +205,7 @@ button.crumb:hover { color: var(--acc-2); }
 .lbl-ico { flex: none; width: 22px; height: 22px; margin-top: 2px; fill: none; stroke: var(--acc-2); stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .lbl.is-hot .lbl-ico, .lbl.is-sel .lbl-ico { stroke: #fff; }
 .lbl-grid .lbl-ico { width: 18px; height: 18px; }
+.lbl-logo { object-fit: contain; background: #eef1fa; border-radius: 5px; padding: 2px; box-sizing: border-box; }
 .lbl-left { flex-direction: row-reverse; text-align: right; }
 .lbl-left .lbl-text { align-items: flex-end; }
 .lbl-en {

@@ -292,17 +292,17 @@ window.GUIDE_DATA = {
     }
   ],
 
-  // 장면에서 각 항목을 나타내는 심볼(엔진 script.js의 ICONS 이름)
+  // 장면에서 각 항목을 나타내는 심볼: k8s-*/logo-* 는 공식 아이콘·로고(logos.js, 출처는 [출처] 서랍), 그 외는 엔진 script.js의 ICONS 이름
   icons: {
-    "kubectl": "terminal", "kubeconfig": "key", "kustomize": "manifest", "cluster": "globe", "cp": "engine", "apiserver": "api",
-    "etcd": "database", "scheduler": "clock", "taint": "shield", "affinity": "target", "ctrlmgr": "sync", "node": "server",
-    "kubelet": "robot", "staticpod": "file", "runtime": "cube", "kubeproxy": "route", "pod": "pod", "container": "cube",
-    "probe": "pulse", "resources": "gauge", "addons": "plug", "cni": "network", "coredns": "search", "objects": "list",
-    "namespace": "scope", "labels": "tag", "workloads": "workflow", "deployment": "rocket", "replicaset": "copy", "statefulset": "database",
-    "daemonset": "server", "job": "clock", "hpa": "scale", "networking": "network", "service": "balance", "clusterip": "link",
-    "nodeport": "door", "lb": "balance", "ingress": "door", "gateway": "route", "netpol": "shield", "config": "sliders",
-    "storage": "disk", "pvc": "disk", "storageclass": "layers", "access": "lock", "rbac": "user", "serviceaccount": "robot",
-    "crd": "brace"
+    "kubectl": "terminal", "kubeconfig": "key", "kustomize": "manifest", "cluster": "logo-kubernetes", "cp": "k8s-cp", "apiserver": "k8s-api",
+    "etcd": "k8s-etcd", "scheduler": "k8s-sched", "taint": "shield", "affinity": "target", "ctrlmgr": "k8s-ctrl", "node": "k8s-node",
+    "kubelet": "k8s-kubelet", "staticpod": "k8s-pod", "runtime": "logo-containerd", "kubeproxy": "k8s-proxy", "pod": "k8s-pod", "container": "cube",
+    "probe": "pulse", "resources": "gauge", "addons": "plug", "cni": "logo-cni", "coredns": "logo-coredns", "objects": "list",
+    "namespace": "k8s-ns", "labels": "tag", "workloads": "workflow", "deployment": "k8s-deploy", "replicaset": "k8s-rs", "statefulset": "k8s-sts",
+    "daemonset": "k8s-ds", "job": "k8s-job", "hpa": "k8s-hpa", "networking": "network", "service": "k8s-svc", "clusterip": "link",
+    "nodeport": "door", "lb": "balance", "ingress": "k8s-ing", "gateway": "route", "netpol": "k8s-netpol", "config": "k8s-configmap",
+    "storage": "disk", "pvc": "k8s-pvc", "storageclass": "k8s-sc", "access": "lock", "rbac": "k8s-role", "serviceaccount": "k8s-sa",
+    "crd": "k8s-crd"
   },
 
   flows: [

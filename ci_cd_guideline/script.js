@@ -341,14 +341,31 @@
     wave: ['M2 9c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5 0', 'M2 15c2.5-3 5-3 7.5 0s5 3 7.5 0 3.5-2 5 0']
   };
 
+  // 공식 아이콘·로고(logos.js). 정리된 SVG를 data: URI로 갖고 있으며 <image>/<img>로만 그린다.
+  var LOGOS = (window.GUIDE_LOGOS && window.GUIDE_LOGOS.items) || {};
+  function logoOf(name) {
+    var L = Object.prototype.hasOwnProperty.call(LOGOS, name) ? LOGOS[name] : null;
+    return L && typeof L.src === 'string' && L.src.indexOf('data:image/svg+xml,') === 0 ? L : null;
+  }
+
   function iconOf(id) {
     var d = state.nodes[id] && state.nodes[id].data;
     var name = (d && d.icon) || (state.icons && state.icons[id]);
-    return ICONS[name] ? name : (state.nodes[id] && state.nodes[id].childIds.length ? 'layers' : 'cube');
+    return ICONS[name] || logoOf(name) ? name : (state.nodes[id] && state.nodes[id].childIds.length ? 'layers' : 'cube');
   }
 
   // 아이콘을 (cx, cy) 중심, 한 변 size 픽셀로 그린다.
   function drawIcon(parent, name, cx, cy, size, cls) {
+    var L = logoOf(name);
+    if (L) {
+      // 공식 아이콘은 원본 비율 그대로(변형 없이) 밝은 판 위에 놓는다.
+      var s = size * 1.28;
+      var im = svg('image', { x: (cx - s / 2).toFixed(1), y: (cy - s / 2).toFixed(1), width: s.toFixed(1), height: s.toFixed(1), preserveAspectRatio: 'xMidYMid meet', class: 'logo' });
+      im.setAttribute('href', L.src);
+      im.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', L.src);
+      parent.appendChild(im);
+      return im;
+    }
     var parts = ICONS[name] || ICONS.cube, k = size / 24;
     var g = svg('g', { class: cls || 'ico', transform: 'translate(' + (cx - size / 2).toFixed(1) + ' ' + (cy - size / 2).toFixed(1) + ') scale(' + k.toFixed(3) + ')' });
     parts.forEach(function (p) {
@@ -361,6 +378,8 @@
 
   // 라벨용 작은 인라인 아이콘
   function iconEl(name) {
+    var L = logoOf(name);
+    if (L) return el('img', { src: L.src, alt: '', class: 'lbl-ico lbl-logo', 'aria-hidden': 'true', draggable: 'false' });
     var s = svg('svg', { viewBox: '0 0 24 24', class: 'lbl-ico', 'aria-hidden': 'true', focusable: 'false' });
     (ICONS[name] || ICONS.cube).forEach(function (p) {
       if (p.charAt(0) === 'c') { var a = p.split(' '); s.appendChild(svg('circle', { cx: a[1], cy: a[2], r: a[3] })); }
@@ -385,9 +404,10 @@
     var cx = bx, cy = by - r * 1.08;
     var stack = Math.min(opts.kids || 0, 2);
     for (var s = stack; s >= 1; s--) poly(lift, hexPts(cx + s * r * 0.16, cy - s * r * 0.16, r), 'hx-back');
-    poly(lift, hexPts(cx, cy, r), 'hx');
+    var nm = iconOf(id), lg = !!logoOf(nm);
+    poly(lift, hexPts(cx, cy, r), lg ? 'hx hx-logo' : 'hx');
     poly(lift, hexPts(cx, cy, r * 0.84), 'hx-in');
-    drawIcon(lift, iconOf(id), cx, cy, r * 1.0, 'ico');
+    drawIcon(lift, nm, cx, cy, r * 1.0, 'ico');
     if (opts.num) {
       var nr = Math.max(8, Math.min(11, r * 0.34)), nx = cx + r * 0.78, ny = cy - r * 0.72;
       lift.appendChild(svg('circle', { cx: nx, cy: ny, r: nr, class: 'num-bg' }));
@@ -600,13 +620,15 @@
             lift.appendChild(svg('ellipse', { cx: foot[0], cy: foot[1], rx: mr * 0.9, ry: mr * 0.3, class: 'tok-shadow' }));
             var my = foot[1] - mr * 1.05;
             if (state.nodes[mb.kid].childIds.length) poly(lift, hexPts(foot[0] + mr * 0.16, my - mr * 0.16, mr), 'm-hx-back');
-            poly(lift, hexPts(foot[0], my, mr), 'm-hx');
-            if (mr >= 9) drawIcon(lift, iconOf(mb.kid), foot[0], my, mr * 1.05, 'm-ico');
+            var mn = iconOf(mb.kid);
+            poly(lift, hexPts(foot[0], my, mr), logoOf(mn) ? 'm-hx m-hx-logo' : 'm-hx');
+            if (mr >= 9) drawIcon(lift, mn, foot[0], my, mr * 1.05, 'm-ico');
           });
           // 레이어 자신의 심볼(앞쪽 모서리 엠블럼)
           var em = I(0, SD, b.z + ST * 0.5), er = Math.max(11, Math.min(20, P.s * 1.25));
-          poly(lift, hexPts(em[0], em[1], er), 'hx');
-          drawIcon(lift, iconOf(id), em[0], em[1], er * 1.05, 'ico');
+          var en = iconOf(id);
+          poly(lift, hexPts(em[0], em[1], er), logoOf(en) ? 'hx hx-logo' : 'hx');
+          drawIcon(lift, en, em[0], em[1], er * 1.05, 'ico');
           if (grid) marker(lift, P, { x: 0, y: 0, z: b.z, w: SW, d: SD, h: ST }, j + 1);
           layer.appendChild(g);
           var a = I(SW, 0, b.z + ST);
@@ -1201,6 +1223,22 @@
     var refs = Array.isArray(data.internalRefs) ? data.internalRefs.filter(isStr) : [];
     var box = $('internal-refs');
     box.textContent = '';
+    var credits = (window.GUIDE_LOGOS && window.GUIDE_LOGOS.credits) || {}, used = [];
+    Object.keys(state.icons || {}).forEach(function (k) {
+      var L = logoOf(state.icons[k]);
+      if (L && credits[L.credit] && used.indexOf(L.credit) < 0) used.push(L.credit);
+    });
+    if (used.length) {
+      box.appendChild(el('h3', { text: '아이콘 · 로고 출처' }));
+      box.appendChild(el('ul', { class: 'source-list logo-credits' }, used.map(function (c) {
+        var s = credits[c];
+        return el('li', null, [
+          isStr(s.url) && /^https:\/\//.test(s.url) ? el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title }) : el('span', { text: s.title }),
+          isStr(s.use) ? el('span', { class: 'source-use', text: ' — ' + s.use }) : null
+        ]);
+      })));
+      box.appendChild(el('p', { class: 'source-use', text: '각 로고는 해당 프로젝트·상표권자의 상표입니다. 이 가이드는 해당 프로젝트를 가리키기 위해서만 원본 그대로 사용하며, 후원·보증 관계를 뜻하지 않습니다. 공식 아이콘이 없거나 사용 허가가 필요한 항목(Docker, Grafana, Loki 등)은 직접 그린 일반 심볼로 표시합니다.' }));
+    }
     if (refs.length) {
       box.appendChild(el('h3', { text: '내부 참고 자료 (학습 맥락)' }));
       box.appendChild(el('ul', { class: 'source-list' }, refs.map(function (r) { return el('li', { text: r }); })));
@@ -1368,7 +1406,7 @@
       state.icons = {};
       Object.keys(data.icons || {}).forEach(function (k) {
         if (!state.nodes[k]) warn('심볼(icons)의 "' + k + '"에 해당하는 노드가 없습니다.');
-        else if (!ICONS[data.icons[k]]) warn('"' + k + '"의 심볼 이름 "' + data.icons[k] + '"을 찾을 수 없어 기본 심볼로 표시합니다.');
+        else if (!ICONS[data.icons[k]] && !logoOf(data.icons[k])) warn('"' + k + '"의 심볼 이름 "' + data.icons[k] + '"을 찾을 수 없어 기본 심볼로 표시합니다.');
         else state.icons[k] = data.icons[k];
       });
     });
