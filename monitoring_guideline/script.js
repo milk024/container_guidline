@@ -1555,35 +1555,47 @@
       return;
     }
     if (kids.length <= 5) {
-      var gap = Math.min(78, 300 / kids.length), base = 120 + kids.length * gap;
+      // 판끼리 겹치지 않게: 판 하나의 화면 높이(윗면 마름모 + 두께)와 간격으로 크기를 정한다
+      var n = kids.length, sep = 16, th = n > 3 ? 10 : 14;
+      var plateH = Math.min(150, (410 - (n - 1) * sep) / n), half = plateH - th;
+      var pw = half * 1.16, pd = half * 0.84, top0 = (H - (n * plateH + (n - 1) * sep)) / 2;
       kids.slice().reverse().forEach(function (c, ri) {
-        var i = kids.length - 1 - ri, y = base - (kids.length - 1 - i) * gap;
+        var i = n - 1 - ri, y = top0 + i * (plateH + sep) + th + half / 2;
         // 위에서부터 1번: 맨 아래 판을 먼저 그린다
         var g2 = svg('g', { class: 'xp', 'data-slide': i + 1, 'data-x': c });
         s.appendChild(g2);
-        var bx = K.box(g2, cx, y, 150, 110, 14, 'xp-bx');
-        K.topIcon(g2, iconOf(c), bx.top[0], bx.top[1], 0, 40);
-        var ax = cx + 128, ay = y - 7, lx = 360;
-        g2.appendChild(svg('polyline', { class: 'xp-lead', points: ptsStr([[ax, ay], [lx - 12, ay]]) }));
+        var bx = K.box(g2, cx, y, pw, pd, th, 'xp-bx');
+        K.topIcon(g2, iconOf(c), bx.top[0], bx.top[1], 0, Math.min(40, half * 0.42));
+        var ax = bx.right[0] + 6, ay = bx.right[1] + th / 2, lx = 372;
+        g2.appendChild(svg('polyline', { class: 'xp-lead', points: ptsStr([[ax, ay], [lx - 13, ay]]) }));
         g2.appendChild(svg('circle', { class: 'xp-num-bg', cx: lx, cy: ay, r: 12 }));
         K.text(g2, String(i + 1), lx, ay, 11, 'xp-num');
       });
       // 부모 받침
       return;
     }
-    var cols = 3, cell = 92;
-    kids.map(function (c, i) { return { c: c, i: i, r: Math.floor(i / cols), k: i % cols }; })
-      .sort(function (a, b) { return (a.r + a.k) - (b.r + b.k); })
-      .forEach(function (o) {
-        var rows = Math.ceil(kids.length / cols);
-        var p = isoP(cx + 10, 140, (o.k - 1) * cell, (o.r - (rows - 1) / 2) * cell, 0);
-        var g3 = svg('g', { class: 'xp', 'data-slide': o.i + 1, 'data-x': o.c });
-        s.appendChild(g3);
-        var b3 = K.box(g3, p[0], p[1] + 60, 62, 62, 22, 'xp-bx');
-        K.topIcon(g3, iconOf(o.c), b3.top[0], b3.top[1], 0, 34);
-        g3.appendChild(svg('circle', { class: 'xp-num-bg', cx: b3.top[0] + 34, cy: b3.top[1] - 22, r: 11 }));
-        K.text(g3, String(o.i + 1), b3.top[0] + 34, b3.top[1] - 22, 10.5, 'xp-num');
-      });
+    // 격자: 블록 사이를 비워 서로 닿지 않게 하고, 전체를 그림 가운데에 둔다
+    var cols = 3, rows = Math.ceil(kids.length / cols);
+    // 행이 늘면 화면 폭이 커지므로, 그림 안에 들어오도록 간격·블록 크기를 함께 줄인다
+    var spanX = (cols - 1 + rows - 1) * 100 / 2 * 2 + 104, spanY = (cols - 1 + rows - 1) * 100 / 2 + 52 + 20 + 40;
+    var sc = Math.min(1, (W - 24) / spanX, (H - 40) / spanY);
+    var cell = 100 * sc, blkS = 52 * sc, blkH = 20 * sc;
+    var cells = kids.map(function (c, i) {
+      var r = Math.floor(i / cols), k = i % cols;
+      return { c: c, i: i, r: r, k: k, p: isoP(0, 0, (k - (cols - 1) / 2) * cell, (r - (rows - 1) / 2) * cell, 0) };
+    });
+    var xs = cells.map(function (o) { return o.p[0]; }), ys = cells.map(function (o) { return o.p[1]; });
+    var ox = W / 2 - (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+    var oy = H / 2 - (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2 + blkH / 2;
+    cells.sort(function (a, b) { return (a.r + a.k) - (b.r + b.k); }).forEach(function (o) {
+      var g3 = svg('g', { class: 'xp', 'data-slide': o.i + 1, 'data-x': o.c });
+      s.appendChild(g3);
+      var b3 = K.box(g3, ox + o.p[0], oy + o.p[1], blkS, blkS, blkH, 'xp-bx');
+      K.topIcon(g3, iconOf(o.c), b3.top[0], b3.top[1], 0, 30 * sc);
+      // 번호는 블록 뒤 꼭짓점 바로 위(뒤쪽 이웃 블록과 닿지 않는 자리)
+      g3.appendChild(svg('circle', { class: 'xp-num-bg', cx: b3.back[0], cy: b3.back[1] - 14 * sc, r: 11 }));
+      K.text(g3, String(o.i + 1), b3.back[0], b3.back[1] - 14 * sc, 10.5, 'xp-num');
+    });
   }
 
   /* ---------------- 실습 창 ----------------

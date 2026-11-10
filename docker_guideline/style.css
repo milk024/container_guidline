@@ -383,11 +383,12 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -46%) scale(.97); } }
 .md-art { position: relative; display: grid; place-items: center; padding: 20px; background: radial-gradient(circle at 50% 45%, hsl(var(--h) 60% 40% / .14), transparent 70%); border-right: 1px solid var(--line); }
 .md-svg { width: 100%; height: 100%; max-height: 520px; }
-.md-arrow { position: absolute; top: 50%; width: 40px; height: 40px; margin-top: -20px; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: 50%; background: rgba(0, 0, 0, .6); cursor: pointer; }
+.md-arrow { position: absolute; bottom: 14px; z-index: 2; width: 40px; height: 40px; display: grid; place-items: center; border: 1px solid var(--line-2); border-radius: 50%; background: rgba(0, 0, 0, .6); cursor: pointer; }
 .md-arrow svg, .md-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
 .md-arrow:disabled { opacity: .25; cursor: default; }
-.md-prev { left: 14px; }
+.md-prev { right: 62px; }
 .md-next { right: 14px; }
+.md-arrow:not(:disabled):hover { border-color: var(--lav-hi); background: rgba(0, 0, 0, .85); }
 .xp { cursor: pointer; opacity: .45; transition: opacity .3s, transform .4s var(--ease); }
 .xp.is-on { opacity: 1; filter: drop-shadow(0 0 12px hsl(var(--h) 90% 70% / .45)); }
 .xp.is-on .ft { fill: hsl(var(--h) 50% 26%); stroke: var(--lav-hi); }
@@ -520,6 +521,11 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 @media (max-width: 700px) {
   .modal { grid-template-columns: 1fr; grid-template-rows: 34% 1fr; width: calc(100vw - 16px); height: calc(100svh - 16px); border-radius: 18px; }
   .md-art { border-right: 0; border-bottom: 1px solid var(--line); padding: 8px; }
+  /* 좁은 화면: 화살표를 오른쪽 세로 칸에 두고, 그림은 그 왼쪽에만 그린다 */
+  .md-art { padding-right: 52px; }
+  .md-arrow { width: 36px; height: 36px; right: 8px; }
+  .md-prev { right: 8px; bottom: 52px; }
+  .md-next { bottom: 8px; }
   .md-info { padding: 18px 16px 14px; }
   .md-title { font-size: 21px; }
   .md-hint { display: none; }
