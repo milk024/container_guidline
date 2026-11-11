@@ -1413,20 +1413,22 @@
       var k2 = segs[1] ? (dist - segs[0]) / segs[1] : 1;
       return [corner[0] + (b[0] - corner[0]) * k2, corner[1] + (b[1] - corner[1]) * k2];
     }
-    function draw(t) {
-      var p = at(t), d = 'M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1);
-      if (t * total > segs[0]) d += 'L' + corner[0].toFixed(1) + ' ' + corner[1].toFixed(1);
-      d += 'L' + p[0].toFixed(1) + ' ' + p[1].toFixed(1);
-      path.setAttribute('d', d);
-      dot.setAttribute('cx', p[0].toFixed(1)); dot.setAttribute('cy', p[1].toFixed(1));
+    // tail~head 구간만 그린다. 머리가 도착한 뒤 꼬리가 따라와 길이 지워진다.
+    function draw(t0, t1) {
+      var p0 = at(t0), p1 = at(t1), d = 'M' + p0[0].toFixed(1) + ' ' + p0[1].toFixed(1);
+      if (t0 * total < segs[0] && t1 * total > segs[0]) d += 'L' + corner[0].toFixed(1) + ' ' + corner[1].toFixed(1);
+      d += 'L' + p1[0].toFixed(1) + ' ' + p1[1].toFixed(1);
+      path.setAttribute('d', t1 > t0 ? d : '');
+      dot.setAttribute('cx', p1[0].toFixed(1)); dot.setAttribute('cy', p1[1].toFixed(1));
     }
-    if (motionOff()) { draw(1); return; }
-    var start = 0, dur = 750;
+    if (motionOff()) { path.setAttribute('d', ''); dot.setAttribute('cx', b[0]); dot.setAttribute('cy', b[1]); return; }
+    var start = 0, dur = 750, lag = 350;
+    function ease(t) { t = Math.max(0, Math.min(1, t)); return 1 - Math.pow(1 - t, 3); }
     function frame(ts) {
       if (!start) start = ts;
-      var t = Math.min(1, (ts - start) / dur), e = 1 - Math.pow(1 - t, 3);
-      draw(e);
-      if (t < 1) travelRaf = requestAnimationFrame(frame); else travelRaf = 0;
+      var el = ts - start;
+      draw(ease((el - lag) / dur), ease(el / dur));
+      if (el < dur + lag) travelRaf = requestAnimationFrame(frame); else { path.setAttribute('d', ''); travelRaf = 0; }
     }
     travelRaf = requestAnimationFrame(frame);
     return pts;
