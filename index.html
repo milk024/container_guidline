@@ -81,6 +81,10 @@
       .card { grid-template-columns: 34px minmax(0, 1fr); }
       .c-go { display: none; }
     }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
+      .glow, .road { animation: none !important; }
+    }
   </style>
 </head>
 <body>
@@ -130,7 +134,9 @@
       s('polygon', { 'class': 'ft', points: pts([A, B, C, D]) }, p);
       return [sx, sy - z1];
     }
-    var reduce = false;
+    // 운영체제의 '동작 줄이기'를 따른다(켜면 이동 점·화면 전환 효과를 멈춤)
+    var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null, reduce = !!(RM && RM.matches);
+    if (RM) { var onRM = function () { reduce = RM.matches; }; if (RM.addEventListener) RM.addEventListener('change', onRM); else if (RM.addListener) RM.addListener(onRM); }
 
     var svgEl = document.getElementById('map-svg'), map = document.getElementById('map'), list = document.getElementById('list');
     var base = s('g', { 'class': 'base' }, svgEl);

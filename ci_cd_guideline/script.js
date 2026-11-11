@@ -596,8 +596,9 @@
   function keyOf(id) { var d = nd(id); return d.key || d.desc; }
   function kidsOf(id) { return id ? state.nodes[id].childIds : state.rootIds; }
   function siblingsOf(id) { var p = state.nodes[id].parentId; return p ? state.nodes[p].childIds : state.rootIds; }
-  // 애니메이션은 항상 켜 둔다(끄는 버튼·설정 없음)
-  function motionOff() { return false; }
+  // 운영체제의 '동작 줄이기'를 켜 두면 장면 전환·데이터 이동·글자 효과를 건너뛴다
+  var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
+  function motionOff() { return !!(RM && RM.matches); }
   function later(fn, ms) { if (motionOff()) fn(); else setTimeout(fn, ms); }
 
   /* ---------------- 복사 버튼 ----------------

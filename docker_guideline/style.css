@@ -562,3 +562,9 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 /* 제목은 줄 길이를 고르게, 본문은 마지막 줄 외톨이 단어를 줄인다(지원 브라우저만) */
 .tours__title, .md-title, .md-s-title, .tv-step__title, .vc-title, .drawer-title, .pr-title { text-wrap: balance; }
 .tours__lead, .md-lead, .md-role, .md-desc, .tv-step__text, .pr-text { text-wrap: pretty; }
+
+/* 동작 줄이기: 반복·이동 애니메이션과 전환을 멈춘다(끝 상태로 바로 표시) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
+  .link.flowing, .glow, .tv-where::before, .tv-node.is-on span, .tour-item:hover .ti-route i, .tv-step__text.is-typing::after { animation: none !important; }
+}
