@@ -29,7 +29,9 @@
   --f-right: hsl(var(--h) 30% 11%);
   --edge: hsl(var(--h) 60% 70% / .55);
   color-scheme: dark;
+  --gut: 24px; /* 화면 가장자리 여백: 헤더·흐름 패널·실습 창이 모두 이 선에 맞춘다 */
 }
+@media (max-width: 899px) { :root { --gut: 16px; } }
 
 * { box-sizing: border-box; }
 html, body { margin: 0; }
@@ -42,6 +44,7 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
+  word-break: keep-all; overflow-wrap: break-word; /* 한국어는 어절 단위로 줄바꿈 */
 }
 body.modal-open, body.drawer-open { overflow: hidden; }
 a { color: var(--lav); }
@@ -64,7 +67,7 @@ button { font: inherit; color: inherit; }
 .sub-top {
   position: sticky; top: 0; z-index: 30;
   display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  padding: 14px 24px; min-height: 64px;
+  padding: 14px var(--gut); min-height: 64px;
   background: linear-gradient(#000 60%, rgba(0, 0, 0, 0));
 }
 .back { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--text); text-decoration: none; font-size: 13.5px; font-weight: 600; padding: 6px 14px 6px 8px; border: 1px solid hsl(var(--h) 95% 75% / .45); border-radius: 999px; background: hsl(var(--h) 90% 70% / .08); transition: background .2s, border-color .2s, transform .2s var(--ease); }
@@ -123,12 +126,12 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .leaders { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 
 @media (min-width: 900px) {
-  .layout { height: calc(100vh - 64px); padding-right: 376px; }
+  .layout { height: calc(100vh - 64px); padding-right: calc(328px + var(--gut) * 2); }
   .hw-stage { height: 100%; justify-content: center; justify-content: safe center; }
   /* 실습 창은 장면을 가리지 않게 제 자리를 따로 갖는다.
      넓은 화면: 펼치면 왼쪽 칸 / 좁은 데스크톱: 펼치면 아래 칸 / 접으면 어느 쪽이든 아래 줄 */
-  html.pr-on .practice { left: 16px; bottom: 16px; }
-  html.pr-on.pr-folded .practice { width: min(420px, calc(100vw - 48px)); }
+  html.pr-on .practice { left: var(--gut); bottom: var(--gut); }
+  html.pr-on.pr-folded .practice { width: min(420px, calc(100vw - var(--gut) * 2)); }
   html.pr-on.pr-folded .layout { padding-bottom: 72px; }
   html.pr-on:not(.pr-folded) .practice { display: flex; flex-direction: column; }
   html.pr-on:not(.pr-folded) .pr-body { flex: 1; min-height: 0; max-height: none; }
@@ -136,15 +139,15 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 @media (min-width: 1400px) {
   :root { --prw: clamp(300px, 24vw, 400px); }
   html.pr-on:not(.pr-folded) .practice { top: 80px; width: var(--prw); }
-  html.pr-on:not(.pr-folded) .layout { padding-left: calc(var(--prw) + 24px); }
+  html.pr-on:not(.pr-folded) .layout { padding-left: calc(var(--prw) + var(--gut) * 2); }
 }
 @media (min-width: 900px) and (max-width: 1399px) {
   /* 세 칸을 나란히 두기엔 좁다: 실습 창은 장면 아래 문서 흐름에 둔다(스크롤해서 본다) */
-  html.pr-on .practice, html.pr-on.pr-folded .practice { position: relative; left: auto; bottom: auto; top: auto; width: auto; height: auto; margin: 0 376px 24px 16px; }
+  html.pr-on .practice, html.pr-on.pr-folded .practice { position: relative; left: auto; bottom: auto; top: auto; width: auto; height: auto; margin: 0 calc(328px + var(--gut) * 2) var(--gut) var(--gut); }
   html.pr-on.pr-folded .layout { padding-bottom: 0; }
 }
 @media (min-width: 900px) and (max-width: 1100px) {
-  html.pr-on .practice, html.pr-on.pr-folded .practice { margin-right: 312px; }
+  html.pr-on .practice, html.pr-on.pr-folded .practice { margin-right: calc(272px + var(--gut) * 2); }
 }
 
 /* ---------------- 장면(SVG) ---------------- */
@@ -241,13 +244,13 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 
 /* ---------------- 오른쪽 흐름 패널 ---------------- */
 .tours {
-  position: relative; z-index: 2; margin: 8px 16px 24px; padding: 18px 18px 22px;
+  position: relative; z-index: 2; margin: 8px var(--gut) var(--gut); padding: 18px 0 22px;
   border-top: 1px solid var(--line); outline: none;
 }
 @media (min-width: 900px) {
   .tours {
-    position: fixed; top: 86px; right: 24px; bottom: 24px; width: 328px; margin: 0;
-    padding: 4px 0 4px 24px; border-top: 0; border-left: 1px solid var(--line);
+    position: fixed; top: 80px; right: var(--gut); bottom: var(--gut); width: 328px; margin: 0;
+    padding: 4px 0 4px var(--gut); border-top: 0; border-left: 1px solid var(--line);
     overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
   }
   .tours::before {
@@ -257,8 +260,8 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
   }
 }
 @media (min-width: 900px) and (max-width: 1100px) {
-  .layout { padding-right: 312px; }
-  .tours { width: 272px; right: 16px; }
+  .layout { padding-right: calc(272px + var(--gut) * 2); }
+  .tours { width: 272px; }
 }
 @keyframes scan { 0% { top: 0; opacity: 0; } 20% { opacity: 1; } 100% { top: calc(100% - 80px); opacity: 0; } }
 
@@ -446,7 +449,7 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 
 /* ---------------- 실습 창 ---------------- */
 .practice {
-  position: fixed; left: 24px; bottom: 24px; z-index: 40; width: min(420px, calc(100vw - 48px));
+  position: fixed; left: var(--gut); bottom: var(--gut); z-index: 40; width: min(420px, calc(100vw - var(--gut) * 2));
   border: 1px solid var(--line-2); border-radius: 16px; background: rgba(8, 8, 12, .95);
   box-shadow: 0 20px 50px rgba(0, 0, 0, .6); backdrop-filter: blur(8px);
 }
@@ -524,10 +527,10 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 
 /* ---------------- 반응형 ---------------- */
 @media (max-width: 899px) {
-  .sub-top { padding: 12px 16px; gap: 10px; }
+  .sub-top { padding: 12px var(--gut); gap: 10px; }
   .crumb { order: 3; flex-basis: 100%; }
   .top-pills { margin-left: auto; }
-  .practice { position: relative; left: auto; bottom: auto; width: auto; margin: 0 16px 24px; }
+  .practice { position: relative; left: auto; bottom: auto; width: auto; margin: 0 var(--gut) var(--gut); }
   .pr-head { cursor: default; }
 }
 @media (max-width: 700px) {
@@ -547,3 +550,6 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
   .tours__title { font-size: 22px; }
 }
 
+/* 제목은 줄 길이를 고르게, 본문은 마지막 줄 외톨이 단어를 줄인다(지원 브라우저만) */
+.tours__title, .md-title, .md-s-title, .tv-step__title, .vc-title, .drawer-title, .pr-title { text-wrap: balance; }
+.tours__lead, .md-lead, .md-role, .md-desc, .tv-step__text, .pr-text { text-wrap: pretty; }
