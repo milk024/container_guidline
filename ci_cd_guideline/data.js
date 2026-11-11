@@ -486,7 +486,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'gitops', title: '목표 구성: GitOps(Pull) 파이프라인', at: 'deploy', src: ['jenkins-pipeline', 'kaniko', 'harbor', 'argocd'], desc: 'Source → Build → Test → Package → Deploy 순서로, CI와 CD를 Manifest repo로 분리한 흐름입니다.',
+      id: 'gitops', title: '목표 구성: GitOps(Pull) 파이프라인 ① CI — 코드에서 Registry까지', at: 'deploy', src: ['jenkins-pipeline', 'kaniko', 'harbor'], next: 'gitops-cd', desc: 'Source → Build → Test → Package 순서로, push한 코드가 이미지가 되어 Harbor에 올라가기까지입니다.',
       steps: [
         { node: 'push', text: '개발자가 App repo에 코드를 push 합니다.' },
         { node: 'trigger', text: 'push 이벤트(Webhook)가 파이프라인을 시작시킵니다.' },
@@ -494,7 +494,12 @@ window.GUIDE_DATA = {
         { node: 'unittest', text: 'Unit test를 실행하고 실패하면 여기서 멈춥니다.' },
         { node: 'imagebuild', text: 'Kaniko가 Daemon 없이 이미지를 빌드합니다.' },
         { node: 'tagging', text: '이미지에 commit SHA Tag를 붙입니다.' },
-        { node: 'registry', text: 'Robot account로 Harbor에 push 합니다.' },
+        { node: 'registry', text: 'Robot account로 Harbor에 push 합니다.' }
+      ]
+    },
+    {
+      id: 'gitops-cd', title: '목표 구성: GitOps(Pull) 파이프라인 ② CD — Manifest repo에서 배포까지', at: 'deploy', src: ['harbor', 'argocd'], desc: 'CI와 CD를 Manifest repo로 분리해, Harbor 스캔 뒤 Manifest repo의 이미지 Tag를 바꾸면 Argo CD가 Sync해 배포하는 순서입니다(①에서 이어짐).',
+      steps: [
         { node: 'scan', text: 'Harbor가 이미지 취약점을 스캔합니다.' },
         { node: 'manifest', text: 'CI가 Manifest repo의 이미지 Tag만 새 값으로 커밋합니다.' },
         { node: 'argocd', text: 'Argo CD가 변경(OutOfSync)을 감지하고 Sync 합니다.' },
@@ -514,13 +519,18 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'helm', title: 'Helm Chart 배포·롤백 흐름', at: 'deploy', src: ['git', 'helm-lint', 'helm-using', 'helm-values', 'harbor-robot', 'pull-secret', 'helm-upgrade', 'rolling', 'helm-rollback'], desc: 'Chart를 검사해 private Registry 이미지로 배포하고, 문제가 생기면 이전 Revision으로 되돌리는 순서입니다.',
+      id: 'helm', title: 'Helm Chart 배포·롤백 흐름 ① Chart·자격 증명 준비', at: 'deploy', src: ['git', 'helm-lint', 'helm-values', 'harbor-robot', 'pull-secret'], next: 'helm-deploy', desc: 'Chart를 검사하고 private Registry 이미지를 받을 자격 증명까지 준비하는 순서입니다.',
       steps: [
         { node: 'repo', text: 'Chart와 환경별 values 파일을 Git 저장소에서 함께 관리합니다.' },
         { node: 'helmlint', text: 'helm lint로 Chart 문법과 권장 형식을 먼저 검사합니다.' },
         { node: 'chart', text: 'values.yaml의 image.tag 등에 이번 배포 값을 넣어 템플릿을 채웁니다.' },
         { node: 'robot', text: 'private Registry 접근에는 사람 계정 대신 Robot account 자격 증명을 씁니다.' },
-        { node: 'pullsecret', text: '그 자격 증명으로 imagePullSecret을 만들어 Pod가 이미지를 받을 수 있게 합니다.' },
+        { node: 'pullsecret', text: '그 자격 증명으로 imagePullSecret을 만들어 Pod가 이미지를 받을 수 있게 합니다.' }
+      ]
+    },
+    {
+      id: 'helm-deploy', title: 'Helm Chart 배포·롤백 흐름 ② 배포와 롤백', at: 'deploy', src: ['helm-using', 'helm-upgrade', 'rolling', 'helm-rollback'], desc: '새 Revision으로 배포하고, 문제가 생기면 이전 Revision으로 되돌리는 순서입니다(①에서 이어짐).',
+      steps: [
         { node: 'helmupgrade', text: 'helm upgrade --install 로 새 Revision을 클러스터에 적용합니다.' },
         { node: 'rollout', text: 'Deployment가 Rolling update로 Pod를 차례로 교체합니다.' },
         { node: 'rollback', text: '문제가 생기면 helm rollback <release> <revision> 으로 이전 Revision을 다시 적용합니다.' }

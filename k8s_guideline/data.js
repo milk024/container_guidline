@@ -511,13 +511,18 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'create', title: 'Deployment로 Pod가 실행되는 흐름', at: 'workloads', src: ['components', 'controller', 'scheduler'], desc: 'kubectl apply -f deploy.yaml부터 컨테이너가 Running이 되기까지의 순서입니다.',
+      id: 'create', title: 'Deployment로 Pod가 실행되는 흐름 ① 요청 저장과 컨트롤러', at: 'workloads', src: ['components', 'controller'], next: 'create-node', desc: 'kubectl apply -f deploy.yaml로 제출한 Deployment가 Pod 객체로 만들어지기까지의 순서입니다.',
       steps: [
         { node: 'kubectl', text: 'kubectl apply로 Deployment YAML을 제출합니다.' },
         { node: 'apiserver', text: 'API Server가 인증·검증 후 요청을 받아들입니다.' },
         { node: 'etcd', text: '원하는 상태(Deployment)가 etcd에 저장됩니다.' },
         { node: 'deployment', text: 'Deployment 컨트롤러가 이를 감지해 ReplicaSet을 만듭니다.' },
-        { node: 'replicaset', text: 'ReplicaSet 컨트롤러가 replicas 수만큼 Pod 객체를 만듭니다.' },
+        { node: 'replicaset', text: 'ReplicaSet 컨트롤러가 replicas 수만큼 Pod 객체를 만듭니다.' }
+      ]
+    },
+    {
+      id: 'create-node', title: 'Deployment로 Pod가 실행되는 흐름 ② Node에서 실행', at: 'node', src: ['components', 'scheduler'], desc: 'Pod 객체가 Node에 배치되어 컨테이너가 Running이 되기까지의 순서입니다(①에서 이어짐).',
+      steps: [
         { node: 'scheduler', text: 'Scheduler가 각 Pod를 실행할 Node를 정합니다.' },
         { node: 'kubelet', text: '해당 Node의 kubelet이 자기 Pod를 발견합니다.' },
         { node: 'runtime', text: 'CRI로 containerd가 이미지를 받아 컨테이너를 만듭니다.' },
@@ -537,12 +542,17 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'workload', title: '운영용 Pod 설정 흐름 (권한·설정·저장소·자원)', at: 'svcconf', src: ['ns', 'rbac', 'cm', 'secret', 'pv', 'sc', 'resources', 'probes'], desc: '애플리케이션을 실제 운영에 올릴 때 Pod 주변에 붙이는 설정을 순서대로 봅니다.',
+      id: 'workload', title: '운영용 Pod 설정 흐름 ① 권한·설정·저장소', at: 'svcconf', src: ['ns', 'rbac', 'cm', 'secret', 'pv', 'sc'], next: 'workload-node', desc: '애플리케이션을 실제 운영에 올릴 때 Pod 주변에 붙이는 권한·설정·저장소를 순서대로 봅니다.',
       steps: [
         { node: 'namespace', text: 'Namespace를 만들어 팀·환경별로 객체 이름과 권한 범위를 나눕니다.' },
         { node: 'rbac', text: 'Role·RoleBinding으로 그 Namespace에서 누가 무엇을 할 수 있는지 정합니다.' },
         { node: 'config', text: '일반 설정은 ConfigMap, 비밀번호 같은 값은 Secret으로 분리해 Pod에 주입합니다.' },
-        { node: 'pvc', text: 'PVC로 저장소를 요청하면 StorageClass가 PV를 만들어 연결합니다.' },
+        { node: 'pvc', text: 'PVC로 저장소를 요청하면 StorageClass가 PV를 만들어 연결합니다.' }
+      ]
+    },
+    {
+      id: 'workload-node', title: '운영용 Pod 설정 흐름 ② 자원과 상태 검사', at: 'node', src: ['resources', 'probes'], desc: '컨테이너 자원을 정하고 Probe로 상태를 검사해 트래픽을 받을 Pod를 가리는 순서입니다(①에서 이어짐).',
+      steps: [
         { node: 'resources', text: '컨테이너마다 CPU·메모리 requests와 limits를 적습니다.' },
         { node: 'scheduler', text: 'Scheduler는 requests를 수용할 여유가 있는 Node에만 Pod를 배치합니다.' },
         { node: 'probe', text: 'kubelet이 liveness·readiness Probe로 컨테이너 상태를 주기적으로 검사합니다.' },

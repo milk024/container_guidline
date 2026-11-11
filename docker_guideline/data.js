@@ -403,7 +403,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'run', title: 'docker run 실행 흐름', at: 'engine', src: ['overview', 'run'], desc: 'docker run nginx를 입력했을 때 컨테이너가 뜨기까지의 순서입니다.',
+      id: 'run', title: 'docker run 실행 흐름 ① 이미지 준비 → 컨테이너 시작', at: 'engine', src: ['overview', 'run'], next: 'run-attach', desc: 'docker run nginx를 입력했을 때 컨테이너가 실행 상태가 되기까지의 순서입니다.',
       steps: [
         { node: 'cli', text: 'docker run nginx 명령을 입력합니다.' },
         { node: 'daemon', text: 'CLI가 API로 dockerd에 컨테이너 생성을 요청합니다.' },
@@ -411,7 +411,12 @@ window.GUIDE_DATA = {
         { node: 'images', text: '받은 Layer들을 쌓아 읽기 전용 Image로 준비합니다.' },
         { node: 'containerd', text: 'dockerd가 containerd에 컨테이너 실행을 맡깁니다.' },
         { node: 'runc', text: 'runc가 namespaces·cgroups를 설정해 프로세스를 만듭니다.' },
-        { node: 'containers', text: '컨테이너가 실행 상태가 됩니다.' },
+        { node: 'containers', text: '컨테이너가 실행 상태가 됩니다.' }
+      ]
+    },
+    {
+      id: 'run-attach', title: 'docker run 실행 흐름 ② 네트워크·저장소 연결', at: 'containers', src: ['run'], desc: 'docker run으로 뜬 컨테이너에 네트워크와 Volume이 연결되는 순서입니다(①에서 이어짐).',
+      steps: [
         { node: 'networks', text: '기본 bridge 네트워크에 연결되고 -p로 포트가 공개됩니다.' },
         { node: 'volumes', text: '-v 옵션이 있으면 Volume을 연결해 데이터를 보존합니다.' }
       ]
