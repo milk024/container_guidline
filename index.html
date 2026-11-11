@@ -87,7 +87,7 @@
     </header>
     <main>
       <h1>코드 한 줄이 서비스가 되기까지</h1>
-      <p class="lead">브랜치에서 커밋하고(Git), 파이프라인이 빌드·배포하고(CI/CD), 이미지로 포장해(Docker), 클러스터에서 실행하고(Kubernetes), 상태를 지켜보는(모니터링) 다섯 단계를 각각의 입체 장면으로 살펴봅니다.</p>
+      <p class="lead">브랜치에서 커밋하고(Git), 파이프라인이 빌드·배포하고(CI/CD), 이미지로 포장해(Docker), 인프라를 코드로 만들고(Terraform), 클러스터에서 실행하고(Kubernetes), 상태를 지켜보는(모니터링) 여섯 단계를 각각의 입체 장면으로 살펴봅니다.</p>
       <div class="grid">
         <div class="map" id="map" aria-hidden="true">
           <svg id="map-svg" viewBox="0 0 900 520" focusable="false"></svg>
@@ -96,7 +96,7 @@
           <ol class="list" id="list"></ol>
         </nav>
       </div>
-      <p class="foot">각 가이드의 설명은 해당 기술의 공식 문서를 근거로 작성했고, 출처는 각 가이드 위쪽의 「출처」에서 볼 수 있습니다. 내용 기준일: 2026-11-09.</p>
+      <p class="foot">각 가이드의 설명은 해당 기술의 공식 문서를 근거로 작성했고, 출처는 각 가이드 위쪽의 「출처」에서 볼 수 있습니다. 내용 기준일: 2026-11-09 (Terraform 2026-11-11).</p>
     </main>
   </div>
   <script>
@@ -104,13 +104,14 @@
     'use strict';
     var NS = 'http://www.w3.org/2000/svg';
     var G = [
-      { id: 'gitflow', en: 'GIT FLOW', eb: '협업·버전 관리', ti: 'Git Flow 브랜치 전략과 커밋 규칙', tx: 'feature → develop → release → main으로 이어지는 브랜치 흐름과 커밋 메시지 규칙', href: 'git_flow_commit_guideline/index.html', h: 268, flows: 7 },
+      { id: 'gitflow', en: 'GIT FLOW', eb: '협업·버전 관리', ti: 'Git Flow 브랜치 전략과 커밋 규칙', tx: 'feature → develop → release → main으로 이어지는 브랜치 흐름과 커밋 메시지 규칙', href: 'git_flow_commit_guideline/index.html', h: 340, flows: 7 },
       { id: 'cicd', en: 'CI/CD', eb: '지속적 통합·배포', ti: 'CI/CD 한눈에 보기', tx: '코드를 올리면 빌드·검사·보관·배포가 자동으로 이어지는 5단계', href: 'ci_cd_guideline/index.html', h: 158, flows: 7 },
       { id: 'docker', en: 'DOCKER', eb: '컨테이너 기초', ti: 'Docker 한눈에 보기', tx: 'Dockerfile로 이미지를 만들고, Registry로 나누고, Container로 실행하는 흐름', href: 'docker_guideline/index.html', h: 198, flows: 8 },
+      { id: 'terraform', en: 'TERRAFORM', eb: '인프라를 코드로', ti: 'Terraform 한눈에 보기', tx: '.tf 파일에 원하는 인프라를 적고, plan으로 확인한 뒤 apply로 만들고 State에 기록하는 흐름', href: 'terraform_guideline/index.html', h: 268, flows: 8 },
       { id: 'k8s', en: 'KUBERNETES', eb: '컨테이너 오케스트레이션', ti: 'Kubernetes 한눈에 보기', tx: '원하는 상태를 제출하면 Control Plane이 기록하고 Worker Node가 실행하는 구조', href: 'k8s_guideline/index.html', h: 226, flows: 8 },
       { id: 'monitoring', en: 'MONITORING', eb: '관측·알림', ti: 'Monitoring 한눈에 보기', tx: '수집 대상 → 수집 → 저장 → 시각화 → 알림으로 메트릭과 로그가 이동하는 과정', href: 'monitoring_guideline/index.html', h: 30, flows: 8 }
     ];
-    var POS = [[150, 330], [300, 240], [450, 330], [600, 240], [750, 330]];
+    var POS = [[150, 330], [270, 240], [390, 330], [510, 240], [630, 330], [750, 240]];
 
     function s(tag, a, p) { var n = document.createElementNS(NS, tag); for (var k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; }
     function iso(sx, sy, x, y, z) { return [sx + x - y, sy + (x + y) / 2 - (z || 0)]; }

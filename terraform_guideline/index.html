@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>인프라 학습 가이드</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#stage">장면으로 건너뛰기</a>
+  <a class="skip-link" href="#tours">흐름 패널로 건너뛰기</a>
+  <div class="glow" aria-hidden="true"></div>
+
+  <header class="sub-top">
+    <a class="back" id="back" href="../index.html"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span id="back-text">전체 지도</span></a>
+    <nav class="crumb" id="crumb" aria-label="현재 위치"></nav>
+    <div class="top-pills" role="toolbar" aria-label="보조 메뉴">
+      <button type="button" class="pill" id="open-outline" aria-haspopup="dialog">구조</button>
+      <button type="button" class="pill" id="open-terms" aria-haspopup="dialog">용어</button>
+      <button type="button" class="pill" id="open-sources" aria-haspopup="dialog">출처</button>
+    </div>
+  </header>
+  <h1 class="sr-only" id="page-title">인프라 학습 가이드</h1>
+
+  <div class="layout">
+    <main class="hw-stage" id="stage" tabindex="-1" aria-label="구조 장면">
+      <button type="button" class="nav-btn stage-up" id="stage-up" hidden aria-keyshortcuts="Escape Backspace"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg><span class="su-t">나가기</span><b id="stage-up-to"></b><kbd aria-hidden="true">Esc</kbd></button>
+      <div class="board-wrap" id="board-wrap">
+        <svg class="board" id="board" aria-hidden="true" focusable="false"></svg>
+        <div class="labels" id="labels" role="group" aria-label="장면의 구성 요소"></div>
+      </div>
+      <div class="view-cap" id="view-cap" hidden></div>
+      <ol class="legend" id="legend" aria-label="장면의 구성 요소 목록" hidden></ol>
+      <p class="hint" id="hint" aria-live="polite"></p>
+    </main>
+
+    <aside class="tours" id="tours" aria-label="흐름" tabindex="-1">
+      <div class="tours__list" id="tours-list"></div>
+      <div class="tours__view" id="tours-view" aria-live="polite"></div>
+      <div class="tour-tip" id="tour-tip" role="status">
+        <b>흐름을 골라 보세요</b>
+        <span>흐름을 누르면 장면 위에서 데이터가 어디서 어디로 가는지 한 단계씩 따라갑니다.</span>
+        <button type="button" id="tour-tip-ok">알겠어요</button>
+      </div>
+    </aside>
+  </div>
+
+  <aside class="practice" id="practice" aria-labelledby="practice-title" hidden>
+    <div class="pr-head" id="pr-head">
+      <span class="pr-grip" aria-hidden="true">⋮⋮</span>
+      <div class="pr-titles">
+        <p class="pr-eyebrow">PRACTICE · 실습</p>
+        <h2 class="pr-title" id="practice-title">예시로 따라 해 보기</h2>
+      </div>
+      <button type="button" class="pr-fold" id="pr-fold" aria-expanded="true" aria-controls="pr-body" title="접기/펼치기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg></button>
+    </div>
+    <div class="pr-body" id="pr-body"></div>
+  </aside>
+
+  <details class="notice" id="data-notice" hidden>
+    <summary id="notice-summary">데이터 경고</summary>
+    <ul id="notice-list"></ul>
+  </details>
+
+  <div class="modal-back" id="modal-back" hidden></div>
+  <section class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="md-title" hidden>
+    <div class="md-art">
+      <svg class="md-svg" id="md-svg" aria-hidden="true" focusable="false"></svg>
+      <button type="button" class="md-arrow md-prev" id="md-prev" aria-label="이전 주제"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <button type="button" class="md-arrow md-next" id="md-next" aria-label="다음 주제"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    </div>
+    <div class="md-info">
+      <button type="button" class="md-close" id="md-close" aria-label="닫기"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      <p class="md-eyebrow" id="md-eyebrow"></p>
+      <h2 class="md-title" id="md-title"></h2>
+      <div class="md-chips" id="md-chips"></div>
+      <div class="md-slides" id="md-slides" aria-live="polite"></div>
+      <div class="md-foot">
+        <div class="md-dots" id="md-dots" role="group" aria-label="설명 넘기기"></div>
+        <p class="md-hint" id="md-hint">← → 키나 아래 점으로 넘겨 보세요</p>
+        <div class="md-actions" id="md-actions"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="drawer-backdrop" id="drawer-backdrop" hidden></div>
+  <aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="drawer-head">
+      <h2 class="drawer-title" id="drawer-title"></h2>
+      <button type="button" class="pill" id="drawer-close">닫기</button>
+    </div>
+    <section class="pane" data-pane="outline" hidden>
+      <p class="pane-note">항목을 누르면 장면에서 해당 위치로 이동합니다.</p>
+      <div class="pane-tools">
+        <button type="button" class="pill" id="expand-all">전체 펼치기</button>
+        <button type="button" class="pill" id="collapse-all">전체 접기</button>
+      </div>
+      <ul class="outline" id="outline"></ul>
+      <h3 class="pane-h">다른 가이드</h3>
+      <nav class="guide-nav" id="guide-nav" aria-label="다른 학습 페이지"></nav>
+    </section>
+    <section class="pane" data-pane="terms" hidden>
+      <p class="pane-note">형식 — <strong>용어</strong>: 요약 / <strong>vs 비교대상</strong>: 차이 1줄</p>
+      <input type="search" class="term-search" id="term-search" placeholder="용어 검색" aria-label="용어 검색">
+      <dl class="term-list" id="term-list"></dl>
+      <button type="button" class="pill term-more" id="term-more" aria-controls="term-list-more" aria-expanded="false" hidden>더 보기</button>
+      <dl class="term-list" id="term-list-more" hidden></dl>
+      <p class="pane-note" id="term-empty" hidden>검색 결과가 없습니다.</p>
+    </section>
+    <section class="pane" data-pane="sources" hidden>
+      <ol class="source-list" id="source-list"></ol>
+      <div id="internal-refs"></div>
+      <p class="pane-note" id="checked-note"></p>
+    </section>
+  </aside>
+
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+
+  <script src="data.js"></script>
+  <script src="logos.js"></script>
+  <script src="scene.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

@@ -13,9 +13,10 @@
   'use strict';
 
   var GUIDES = [
-    { id: 'gitflow', label: 'Git Flow·커밋', en: 'GIT FLOW', href: '../git_flow_commit_guideline/index.html', h: 268 },
+    { id: 'gitflow', label: 'Git Flow·커밋', en: 'GIT FLOW', href: '../git_flow_commit_guideline/index.html', h: 340 },
     { id: 'cicd', label: 'CI/CD', en: 'CI/CD', href: '../ci_cd_guideline/index.html', h: 158 },
     { id: 'docker', label: 'Docker', en: 'DOCKER', href: '../docker_guideline/index.html', h: 198 },
+    { id: 'terraform', label: 'Terraform', en: 'TERRAFORM', href: '../terraform_guideline/index.html', h: 268 },
     { id: 'k8s', label: 'Kubernetes', en: 'KUBERNETES', href: '../k8s_guideline/index.html', h: 226 },
     { id: 'monitoring', label: '모니터링', en: 'MONITORING', href: '../monitoring_guideline/index.html', h: 30 }
   ];
