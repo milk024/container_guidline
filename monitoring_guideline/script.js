@@ -166,7 +166,7 @@
       if (steps.length < 2) { warn('흐름 "' + f.title + '"는 유효한 단계가 2개 미만이라 제외했습니다.'); return; }
       var at = isStr(f.at) ? f.at : null;
       if (at && !state.nodes[at]) { warn('흐름 "' + f.title + '": at 노드 "' + at + '"가 없어 항상 표시합니다.'); at = null; }
-      state.flows.push({ id: f.id || 'flow' + fi, title: f.title, desc: isStr(f.desc) ? f.desc : '', steps: steps, main: f.main === true, at: at, src: checkSrc('흐름 "' + f.title + '"', f.src) });
+      state.flows.push({ id: f.id || 'flow' + fi, title: f.title, desc: isStr(f.desc) ? f.desc : '', steps: steps, main: f.main === true, at: at, next: isStr(f.next) ? f.next : null, src: checkSrc('흐름 "' + f.title + '"', f.src) });
     });
   }
 
@@ -1311,10 +1311,18 @@
     box.appendChild(el('div', { class: 'tv-nav' }, [prev, el('span', { class: 'tv-count', id: 'tv-count' }), next]));
     prev.addEventListener('click', function () { goStep(state.step - 1); });
     next.addEventListener('click', function () {
-      if (state.step >= f.steps.length - 1) closeFlow(); else goStep(state.step + 1);
+      if (state.step < f.steps.length - 1) { goStep(state.step + 1); return; }
+      var ni = contIndex(f);
+      if (ni >= 0) openFlow(ni); else closeFlow();
     });
   }
 
+  // 7단계를 넘는 흐름은 둘로 나누고 next(뒷부분 흐름 id)로 잇는다
+  function contIndex(f) {
+    if (!f || !f.next) return -1;
+    for (var k = 0; k < state.flows.length; k++) if (state.flows[k].id === f.next) return k;
+    return -1;
+  }
   function goStep(i, first) {
     var f = state.flows[state.flow];
     if (!f) return;
@@ -1347,8 +1355,10 @@
     if (s === f.steps[0] || last) { src.appendChild(document.createTextNode('출처: ')); src.appendChild(srcLinks(f.src)); }
     $('tv-count').innerHTML = '<b>' + pad2(i + 1) + '</b> / ' + pad2(f.steps.length);
     $('tv-prev').disabled = i === 0;
-    $('tv-next-t').textContent = last ? '마치기' : '다음';
-    $('tv-next').classList.toggle('is-away', last);
+    var cont = last && contIndex(f) >= 0;
+    $('tv-next-t').textContent = cont ? '이어서 보기' : last ? '마치기' : '다음';
+    $('tv-next').classList.toggle('is-away', last && !cont);
+    if (cont) $('tv-next').setAttribute('aria-label', '이어서 보기: ' + state.flows[contIndex(f)].title); else $('tv-next').removeAttribute('aria-label');
     // 단계 대상이 세부 항목이면 그 영역 안으로, 최상위 항목이면 전체 장면으로 옮긴다.
     // 화면이 바뀌면 renderView가 새 장면에서 지금 단계를 다시 비춘다.
     var want = stepView(s.node);
