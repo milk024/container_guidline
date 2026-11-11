@@ -66,6 +66,9 @@
     html.is-leaving body { opacity: 0; transition: opacity .3s ease .05s; }
     html.is-leaving .map { transform: scale(1.12); transition: transform .35s var(--ease); }
     html.is-leaving .tile.is-on { transform: translateY(-24px) scale(1.06); }
+    .path { margin: 12px 0 0; max-width: 640px; color: var(--soft); font-size: 14px; }
+    .path b { color: var(--text); }
+    .c-start { display: inline-block; margin-left: 6px; padding: 1px 8px; border: 1px solid hsl(var(--h) 95% 70%); border-radius: 999px; font: 600 12px/1.5 inherit; letter-spacing: 0; color: hsl(var(--h) 95% 85%); vertical-align: 1px; }
     .foot { margin-top: 28px; font-size: 12px; color: var(--muted); }
     @media (max-width: 899px) {
       .wrap { padding: 24px 16px 40px; }
@@ -88,6 +91,7 @@
     <main>
       <h1>코드 한 줄이 서비스가 되기까지</h1>
       <p class="lead">브랜치에서 커밋하고(Git), 파이프라인이 빌드·배포하고(CI/CD), 이미지로 포장해(Docker), 인프라를 코드로 만들고(Terraform), 클러스터에서 실행하고(Kubernetes), 상태를 지켜보는(모니터링) 여섯 단계를 각각의 입체 장면으로 살펴봅니다.</p>
+      <p class="path"><b>01 → 06은 코드가 서비스가 되는 파이프라인 순서</b>입니다. 꼭 순서대로 볼 필요는 없고, 처음이라면 <b>03 Docker부터</b> 시작하면 나머지가 이어 붙기 쉽습니다.</p>
       <div class="grid">
         <div class="map" id="map" aria-hidden="true">
           <svg id="map-svg" viewBox="0 0 900 520" focusable="false"></svg>
@@ -106,7 +110,7 @@
     var G = [
       { id: 'gitflow', en: 'GIT FLOW', eb: '협업·버전 관리', ti: 'Git Flow 한눈에 보기', tx: 'feature → develop → release → main으로 이어지는 브랜치 흐름과 커밋 메시지 규칙', href: 'git_flow_commit_guideline/index.html', h: 340, flows: 7 },
       { id: 'cicd', en: 'CI/CD', eb: '지속적 통합·배포', ti: 'CI/CD 한눈에 보기', tx: '코드를 올리면 빌드·검사·보관·배포가 자동으로 이어지는 5단계', href: 'ci_cd_guideline/index.html', h: 158, flows: 9 },
-      { id: 'docker', en: 'DOCKER', eb: '컨테이너 기초', ti: 'Docker 한눈에 보기', tx: 'Dockerfile로 이미지를 만들고, Registry로 나누고, Container로 실행하는 흐름', href: 'docker_guideline/index.html', h: 198, flows: 9 },
+      { id: 'docker', en: 'DOCKER', eb: '컨테이너 기초', ti: 'Docker 한눈에 보기', tx: 'Dockerfile로 이미지를 만들고, Registry로 나누고, Container로 실행하는 흐름', href: 'docker_guideline/index.html', h: 198, flows: 9, start: true },
       { id: 'terraform', en: 'TERRAFORM', eb: '인프라를 코드로', ti: 'Terraform 한눈에 보기', tx: '.tf 파일에 원하는 인프라를 적고, plan으로 확인한 뒤 apply로 만들고 State에 기록하는 흐름', href: 'terraform_guideline/index.html', h: 268, flows: 8 },
       { id: 'k8s', en: 'KUBERNETES', eb: '컨테이너 오케스트레이션', ti: 'Kubernetes 한눈에 보기', tx: '원하는 상태를 제출하면 Control Plane이 기록하고 Worker Node가 실행하는 구조', href: 'k8s_guideline/index.html', h: 226, flows: 10 },
       { id: 'monitoring', en: 'MONITORING', eb: '관측·알림', ti: 'Monitoring 한눈에 보기', tx: '수집 대상 → 수집 → 저장 → 시각화 → 알림으로 메트릭과 로그가 이동하는 과정', href: 'monitoring_guideline/index.html', h: 30, flows: 8 }
@@ -148,6 +152,7 @@
       a.innerHTML = '<span class="num" aria-hidden="true">0' + (i + 1) + '</span><span><span class="c-eb"></span><span class="c-ti"></span><span class="c-tx"></span></span><span class="c-go" aria-hidden="true">흐름 ' + g.flows + '개 ›</span>';
       a.querySelector('.c-eb').textContent = g.en + ' · ' + g.eb;
       a.querySelector('.c-ti').textContent = g.ti;
+      if (g.start) { var st = document.createElement('span'); st.className = 'c-start'; st.textContent = '처음이라면 여기부터'; a.querySelector('.c-ti').appendChild(st); }
       a.querySelector('.c-tx').textContent = g.tx;
       a.addEventListener('click', function (e) {
         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
