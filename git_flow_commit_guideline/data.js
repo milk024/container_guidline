@@ -164,7 +164,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'commitmsg', title: '커밋 메시지 작성 흐름', src: ['cc', 'book-contrib', 'gh-link', 'git-log'],
+      id: 'commitmsg', title: '커밋 메시지 작성 흐름', at: 'message', src: ['cc', 'book-contrib', 'gh-link', 'git-log'],
       desc: 'Conventional Commits 형식으로 한 커밋의 메시지를 채워 가는 순서입니다.',
       steps: [
         { node: 'type', text: '변경 종류를 고릅니다. 새 기능은 feat, 버그 수정은 fix, 문서는 docs 처럼 11가지 중 하나입니다.' },
@@ -176,7 +176,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'release', title: '릴리스 흐름 (develop → release → main)', src: ['nvie', 'git-tag', 'semver'],
+      id: 'release', title: '릴리스 흐름 (develop → release → main)', at: 'branches', src: ['nvie', 'git-tag', 'semver'],
       desc: '다음 버전에 들어갈 기능이 모인 develop을 운영 버전으로 내보내는 순서입니다.',
       steps: [
         { node: 'develop', text: '이번 릴리스에 넣을 기능이 develop에 모두 병합됐습니다.' },
@@ -186,7 +186,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'hotfix', title: '긴급 수정 흐름 (main → hotfix)', src: ['nvie', 'semver', 'git-tag'],
+      id: 'hotfix', title: '긴급 수정 흐름 (main → hotfix)', at: 'branches', src: ['nvie', 'semver', 'git-tag'],
       desc: '운영 중인 버전의 버그를 develop을 거치지 않고 바로 고치는 순서입니다.',
       steps: [
         { node: 'main', text: '운영(main, v1.2.0)에서 급한 버그가 발견됩니다.' },
@@ -196,7 +196,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'cleanup', title: '이력 다듬기·되돌리기 흐름', src: ['book-rewrite', 'git-commit', 'git-rebase', 'git-log', 'git-revert'],
+      id: 'cleanup', title: '이력 다듬기·되돌리기 흐름', at: 'history', src: ['book-rewrite', 'git-commit', 'git-rebase', 'git-log', 'git-revert'],
       desc: 'push 전에는 이력을 고치고, push 후에는 새 커밋으로 되돌리는 구분입니다.',
       steps: [
         { node: 'amend', text: '방금 커밋에 파일을 빠뜨렸다면 git commit --amend --no-edit 으로 직전 커밋을 교체합니다.' },
@@ -206,7 +206,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'together', title: 'Git Flow + 커밋 규칙 함께 쓰기', src: ['nvie', 'cc', 'gh-merges', 'semver'],
+      id: 'together', title: 'Git Flow + 커밋 규칙 함께 쓰기', at: 'branches', src: ['nvie', 'cc', 'gh-merges', 'semver'],
       desc: '브랜치마다 커밋 규칙이 어떻게 이어져 버전 번호까지 결정되는지 보는 순서입니다.',
       steps: [
         { node: 'feature', text: 'feature/login 브랜치에서 작업합니다.' },
@@ -218,7 +218,7 @@ window.GUIDE_DATA = {
       ]
     },
     {
-      id: 'choose', title: '대안 전략 비교 흐름', src: ['nvie', 'gh-flow', 'gh-merges', 'gitlab-strategies', 'tbd'],
+      id: 'choose', title: '대안 전략 비교 흐름', at: 'alternatives', src: ['nvie', 'gh-flow', 'gh-merges', 'gitlab-strategies', 'tbd'],
       desc: 'Git Flow가 무겁게 느껴질 때 고려하는 더 단순한 전략들입니다.',
       steps: [
         { node: 'githubflow', text: '지속 배포하는 웹 서비스라면 main + 짧은 브랜치 + PR만 쓰는 GitHub flow를 검토합니다(Git Flow 원문 2020 회고도 같은 권고).' },
