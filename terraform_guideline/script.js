@@ -1266,9 +1266,7 @@
     $('tours').classList.add('is-view');
     document.body.classList.add('touring');
     buildFlowView();
-    var target = f.at && state.nodes[f.at].childIds.length ? f.at : null;
-    if (target !== state.viewId) setView(target);
-    later(function () { goStep(state.step, true); }, motionOff() ? 0 : 300);
+    goStep(state.step, true);
     var back = $('tours-view').querySelector('.tours__back');
     if (back) back.focus();
   }
@@ -1328,8 +1326,6 @@
       b.classList.toggle('is-done', k < i);
       b.classList.toggle('is-on', k === i);
       if (k === i) b.setAttribute('aria-current', 'step'); else b.removeAttribute('aria-current');
-      var drawn = drawnFor(f.steps[k].node);
-      b.classList.toggle('is-away', !drawn);
     });
     $('tours-view').querySelector('.tv-line').style.setProperty('--p', f.steps.length > 1 ? i / (f.steps.length - 1) : 0);
     // 위: 지금 다루는 대상
@@ -1353,8 +1349,18 @@
     $('tv-prev').disabled = i === 0;
     $('tv-next-t').textContent = last ? '마치기' : '다음';
     $('tv-next').classList.toggle('is-away', last);
-    applyFlow(!first && prevStep !== i ? prevStep : null);
+    // 단계 대상이 세부 항목이면 그 영역 안으로, 최상위 항목이면 전체 장면으로 옮긴다.
+    // 화면이 바뀌면 renderView가 새 장면에서 지금 단계를 다시 비춘다.
+    var want = stepView(s.node);
+    if (want !== state.viewId) setView(want);
+    else applyFlow(!first && prevStep !== i ? prevStep : null);
     updateHint();
+  }
+
+  // 단계 노드가 제 모습으로 그려지는 화면: 최상위면 전체 장면, 아니면 그 노드가 속한 최상위 영역
+  function stepView(id) {
+    var p = pathTo(id);
+    return p.length > 1 && canEnter(p[0]) ? p[0] : null;
   }
 
   // 흐름 단계 노드가 지금 장면에서 그려진 곳: 자기 자신 → 가장 가까운 조상
