@@ -541,16 +541,20 @@
         isStr(s.use) ? el('span', { class: 'source-use', text: ' — ' + s.use }) : null
       ]));
     });
-    var refs = Array.isArray(data.internalRefs) ? data.internalRefs.filter(isStr) : [];
+    $('checked-note').textContent = '모든 설명은 위 공식 문서를 근거로 작성했습니다.' + (isStr(data.meta && data.meta.checked) ? ' 내용 기준일: ' + data.meta.checked + '.' : '');
+    // 하단 구역은 모든 가이드에서 같은 순서: 다른 가이드 → 아이콘·로고 출처 → 내부 참고 자료. 비면 '해당 없음'
     var box = $('internal-refs');
     box.textContent = '';
+    function none() { return el('p', { class: 'pane-note src-none', text: '해당 없음' }); }
+    box.appendChild(el('h3', { class: 'pane-h', text: '다른 가이드' }));
+    box.appendChild(el('nav', { class: 'guide-nav', 'data-guide-nav': '', 'aria-label': '다른 학습 페이지(출처 탭)' }));
     var credits = (window.GUIDE_LOGOS && window.GUIDE_LOGOS.credits) || {}, used = [];
     Object.keys(state.icons || {}).forEach(function (k) {
       var L = logoOf(state.icons[k]);
       if (L && credits[L.credit] && used.indexOf(L.credit) < 0) used.push(L.credit);
     });
+    box.appendChild(el('h3', { class: 'pane-h', text: '아이콘 · 로고 출처' }));
     if (used.length) {
-      box.appendChild(el('h3', { text: '아이콘 · 로고 출처' }));
       box.appendChild(el('ul', { class: 'source-list logo-credits' }, used.map(function (c) {
         var s = credits[c];
         return el('li', null, [
@@ -559,13 +563,13 @@
         ]);
       })));
       box.appendChild(el('p', { class: 'source-use', text: '각 로고는 해당 프로젝트·상표권자의 상표입니다. 이 가이드는 해당 프로젝트를 가리키기 위해서만 원본 그대로 사용하며, 후원·보증 관계를 뜻하지 않습니다. 공식 아이콘이 없거나 사용 허가가 필요한 항목(Docker, Grafana, Loki 등)은 직접 그린 일반 심볼로 표시합니다.' }));
-    }
+    } else box.appendChild(none());
+    var refs = Array.isArray(data.internalRefs) ? data.internalRefs.filter(isStr) : [];
+    box.appendChild(el('h3', { class: 'pane-h', text: '내부 참고 자료' }));
     if (refs.length) {
-      box.appendChild(el('h3', { text: '내부 참고 자료 (학습 맥락)' }));
       box.appendChild(el('ul', { class: 'source-list' }, refs.map(function (r) { return el('li', { text: r }); })));
       if (isStr(data.internalNote)) box.appendChild(el('p', { class: 'source-use', text: data.internalNote }));
-    }
-    $('checked-note').textContent = '모든 설명은 위 공식 문서를 근거로 작성했습니다.' + (isStr(data.meta && data.meta.checked) ? ' 내용 기준일: ' + data.meta.checked + '.' : '');
+    } else box.appendChild(none());
   }
 
 
@@ -1780,11 +1784,15 @@
   }
 
   function renderGuideNav() {
-    var nav = $('guide-nav');
-    nav.textContent = '';
-    nav.appendChild(el('a', { class: 'guide-link', href: HUB, text: '전체 지도' }));
-    GUIDES.forEach(function (g) {
-      nav.appendChild(el('a', { class: 'guide-link', href: g.href, 'aria-current': g.id === state.meta.id ? 'page' : null, text: g.label }));
+    // 구조 탭과 출처 탭 하단의 '다른 가이드'를 같은 목록으로 채운다
+    var navs = [$('guide-nav')].concat(Array.prototype.slice.call(document.querySelectorAll('[data-guide-nav]')));
+    navs.forEach(function (nav) {
+      if (!nav) return;
+      nav.textContent = '';
+      nav.appendChild(el('a', { class: 'guide-link', href: HUB, text: '전체 지도' }));
+      GUIDES.forEach(function (g) {
+        nav.appendChild(el('a', { class: 'guide-link', href: g.href, 'aria-current': g.id === state.meta.id ? 'page' : null, text: g.label }));
+      });
     });
   }
 

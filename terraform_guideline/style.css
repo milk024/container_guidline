@@ -522,7 +522,8 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .term-more { margin: 12px 0; }
 .source-list { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 13.5px; }
 .source-use { color: var(--muted); font-size: 12.5px; }
-#internal-refs h3 { margin: 20px 0 8px; font-size: 13px; color: var(--lav); }
+#internal-refs h3.pane-h { margin: 24px 0 10px; }
+.src-none { margin: 0; }
 #internal-refs ul { padding-left: 20px; font-size: 13px; color: var(--soft); }
 
 /* ---------------- 반응형 ---------------- */
