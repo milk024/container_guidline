@@ -81,6 +81,8 @@
       .card { grid-template-columns: 34px minmax(0, 1fr); }
       .c-go { display: none; }
     }
+    .skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 8px 14px; background: var(--lav); color: #000; border-radius: 999px; font-weight: 700; text-decoration: none; }
+    .skip-link:focus { top: 12px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
       .glow, .road { animation: none !important; }
@@ -88,6 +90,7 @@
   </style>
 </head>
 <body>
+  <a class="skip-link" href="#list">학습 가이드 목록으로 건너뛰기</a>
   <div class="glow" aria-hidden="true"></div>
   <div class="wrap">
     <header class="top">
@@ -102,7 +105,7 @@
           <svg id="map-svg" viewBox="0 0 900 520" focusable="false"></svg>
         </div>
         <nav aria-label="학습 가이드">
-          <ol class="list" id="list"></ol>
+          <ol class="list" id="list" tabindex="-1"></ol>
         </nav>
       </div>
       <p class="foot">각 가이드의 설명은 해당 기술의 공식 문서를 근거로 작성했고, 출처는 각 가이드 위쪽의 「출처」에서 볼 수 있습니다. 내용 기준일: 2026-11-09 (Terraform 2026-11-11).</p>
