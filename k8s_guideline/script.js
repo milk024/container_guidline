@@ -1229,6 +1229,7 @@
     box.textContent = '';
     box.appendChild(el('p', { class: 'tours__eyebrow', text: 'FLOWS · ' + String(m.eyebrow || (state.guide ? state.guide.label : '흐름')) }));
     box.appendChild(el('h2', { class: 'tours__title', text: m.title || '학습 가이드' }));
+    if (isStr(m.checked)) box.appendChild(el('p', { class: 'tours__checked', text: '내용 기준일 ' + m.checked }));
     var lead = isStr(m.keyPoint) ? m.keyPoint : isStr(m.subtitle) ? m.subtitle : '';
     if (lead) box.appendChild(el('p', { class: 'tours__lead' }, [richText(lead, {})]));
     if (Array.isArray(m.learn) && m.learn.length) {

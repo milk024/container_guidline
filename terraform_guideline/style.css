@@ -273,6 +273,7 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .tours:not(.is-view) .tours__view { display: none; }
 .tours__eyebrow { margin: 0 0 8px; font: 600 11px/1.4 var(--mono); letter-spacing: .26em; color: var(--lav); text-transform: uppercase; }
 .tours__title { margin: 0 0 10px; font-size: 26px; line-height: 1.25; font-weight: 800; letter-spacing: -.01em; }
+.tours__checked { margin: -4px 0 10px; font: 500 12px/1.4 var(--mono); color: var(--muted); }
 .tours__lead { margin: 0 0 16px; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
 .tours__learn { margin: 0 0 20px; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; color: var(--soft); }
 .tours__learn li { position: relative; padding-left: 16px; }

@@ -60,6 +60,7 @@
     .c-eb { display: block; font: 600 10px/1.4 var(--mono); letter-spacing: .2em; color: hsl(var(--h) 95% 80%); }
     .c-ti { display: block; font-size: 16px; font-weight: 700; margin: 2px 0; }
     .c-tx { display: block; font-size: 12.5px; line-height: 1.6; color: var(--muted); }
+    .c-ck { display: block; margin-top: 4px; font: 500 12px/1.4 var(--mono); color: var(--muted); }
     .c-go { font: 600 11px var(--mono); color: hsl(var(--h) 95% 80%); white-space: nowrap; }
     body { animation: pageIn .5s var(--ease) both; }
     @keyframes pageIn { from { opacity: 0; } }
@@ -108,12 +109,12 @@
     'use strict';
     var NS = 'http://www.w3.org/2000/svg';
     var G = [
-      { id: 'gitflow', en: 'GIT FLOW', eb: '협업·버전 관리', ti: 'Git Flow 한눈에 보기', tx: 'feature(기능 개발) → develop(다음 릴리스 통합) → release(버전 확정) → main(운영 배포본) 브랜치로 이어지는 흐름과 커밋 메시지 규칙', href: 'git_flow_commit_guideline/index.html', h: 340, flows: 7 },
-      { id: 'cicd', en: 'CI/CD', eb: '지속적 통합·배포', ti: 'CI/CD 한눈에 보기', tx: '코드를 올리면(push) 빌드·검사·보관·배포가 자동으로 이어지는 5단계', href: 'ci_cd_guideline/index.html', h: 158, flows: 9 },
-      { id: 'docker', en: 'DOCKER', eb: '컨테이너 기초', ti: 'Docker 한눈에 보기', tx: 'Dockerfile(빌드 순서를 적은 파일)로 이미지(실행에 필요한 파일 묶음)를 만들고, Registry(이미지 저장소)로 나누고, Container(격리되어 실행되는 프로세스)로 실행하는 흐름', href: 'docker_guideline/index.html', h: 198, flows: 9, start: true },
-      { id: 'terraform', en: 'TERRAFORM', eb: '인프라를 코드로', ti: 'Terraform 한눈에 보기', tx: '.tf 파일(Terraform 설정 파일)에 원하는 인프라를 적고, plan(바뀔 내용 미리 보기)으로 확인한 뒤 apply로 만들고 State(관리 중인 인프라 기록)에 기록하는 흐름', href: 'terraform_guideline/index.html', h: 268, flows: 8 },
-      { id: 'k8s', en: 'KUBERNETES', eb: '컨테이너 오케스트레이션', ti: 'Kubernetes 한눈에 보기', tx: '원하는 상태를 제출하면 Control Plane(클러스터를 관리하는 구성요소)이 기록하고 Worker Node(컨테이너를 실행하는 서버)가 실행하는 구조', href: 'k8s_guideline/index.html', h: 226, flows: 10 },
-      { id: 'monitoring', en: 'MONITORING', eb: '관측·알림', ti: 'Monitoring 한눈에 보기', tx: '수집 대상 → 수집 → 저장 → 시각화 → 알림으로 메트릭(시간에 따라 기록한 숫자 측정값)과 로그가 이동하는 과정', href: 'monitoring_guideline/index.html', h: 30, flows: 8 }
+      { id: 'gitflow', en: 'GIT FLOW', eb: '협업·버전 관리', ti: 'Git Flow 한눈에 보기', tx: 'feature(기능 개발) → develop(다음 릴리스 통합) → release(버전 확정) → main(운영 배포본) 브랜치로 이어지는 흐름과 커밋 메시지 규칙', href: 'git_flow_commit_guideline/index.html', h: 340, flows: 7, checked: '2026-11-09' },
+      { id: 'cicd', en: 'CI/CD', eb: '지속적 통합·배포', ti: 'CI/CD 한눈에 보기', tx: '코드를 올리면(push) 빌드·검사·보관·배포가 자동으로 이어지는 5단계', href: 'ci_cd_guideline/index.html', h: 158, flows: 9, checked: '2026-11-09' },
+      { id: 'docker', en: 'DOCKER', eb: '컨테이너 기초', ti: 'Docker 한눈에 보기', tx: 'Dockerfile(빌드 순서를 적은 파일)로 이미지(실행에 필요한 파일 묶음)를 만들고, Registry(이미지 저장소)로 나누고, Container(격리되어 실행되는 프로세스)로 실행하는 흐름', href: 'docker_guideline/index.html', h: 198, flows: 9, checked: '2026-11-09', start: true },
+      { id: 'terraform', en: 'TERRAFORM', eb: '인프라를 코드로', ti: 'Terraform 한눈에 보기', tx: '.tf 파일(Terraform 설정 파일)에 원하는 인프라를 적고, plan(바뀔 내용 미리 보기)으로 확인한 뒤 apply로 만들고 State(관리 중인 인프라 기록)에 기록하는 흐름', href: 'terraform_guideline/index.html', h: 268, flows: 8, checked: '2026-11-11' },
+      { id: 'k8s', en: 'KUBERNETES', eb: '컨테이너 오케스트레이션', ti: 'Kubernetes 한눈에 보기', tx: '원하는 상태를 제출하면 Control Plane(클러스터를 관리하는 구성요소)이 기록하고 Worker Node(컨테이너를 실행하는 서버)가 실행하는 구조', href: 'k8s_guideline/index.html', h: 226, flows: 10, checked: '2026-11-09' },
+      { id: 'monitoring', en: 'MONITORING', eb: '관측·알림', ti: 'Monitoring 한눈에 보기', tx: '수집 대상 → 수집 → 저장 → 시각화 → 알림으로 메트릭(시간에 따라 기록한 숫자 측정값)과 로그가 이동하는 과정', href: 'monitoring_guideline/index.html', h: 30, flows: 8, checked: '2026-11-09' }
     ];
     var POS = [[150, 330], [270, 240], [390, 330], [510, 240], [630, 330], [750, 240]];
 
@@ -154,6 +155,7 @@
       a.querySelector('.c-ti').textContent = g.ti;
       if (g.start) { var st = document.createElement('span'); st.className = 'c-start'; st.textContent = '처음이라면 여기부터'; a.querySelector('.c-ti').appendChild(st); }
       a.querySelector('.c-tx').textContent = g.tx;
+      if (g.checked) { var ck = document.createElement('span'); ck.className = 'c-ck'; ck.textContent = '내용 기준일 ' + g.checked; a.querySelector('.c-tx').parentNode.appendChild(ck); }
       a.addEventListener('click', function (e) {
         if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
         e.preventDefault(); go(i);
