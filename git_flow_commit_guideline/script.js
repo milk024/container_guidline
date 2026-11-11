@@ -702,7 +702,7 @@
     // 세워 둔 아이콘(떠 있는 물체용)
     K.icon = function (parent, name, cx, cy, size) { K.obst.push([cx - size / 2, cy - size / 2, size, size]); return drawIcon(parent, name, cx, cy, size, 'ico'); };
     K.text = function (parent, text, x, y, size, cls, anchor) {
-      var t = svg('text', { class: 'sc-tx' + (cls ? ' ' + cls : ''), x: x, y: y, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', 'font-size': size || 11 });
+      var t = svg('text', { class: 'sc-tx' + (cls ? ' ' + cls : ''), x: x, y: y, 'text-anchor': anchor || 'middle', 'dominant-baseline': 'central', 'font-size': size || 12 });
       t.textContent = text;
       parent.appendChild(t);
       return t;
