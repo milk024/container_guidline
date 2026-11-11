@@ -10,7 +10,8 @@ window.GUIDE_DATA = {
     title: 'Git Flow 한눈에 보기',
     subtitle: 'feature → develop → release → main으로 이어지는 브랜치 흐름과, 이력을 읽기 쉽게 만드는 커밋 메시지 규칙을 단계별로 따라갑니다.',
     checked: '2026-11-09',
-    keyPoint: '브랜치 전략과 커밋 규칙 — 브랜치를 어떻게 나누고 합칠지(Git Flow)와, 이력을 읽기 쉽게 커밋 메시지를 어떻게 쓸지(Conventional Commits)를 정한 협업 규칙'
+    keyPoint: '브랜치 전략과 커밋 규칙 — 브랜치를 어떻게 나누고 합칠지(Git Flow)와, 이력을 읽기 쉽게 커밋 메시지를 어떻게 쓸지(Conventional Commits)를 정한 협업 규칙',
+    learn: ['feature → develop → release → main으로 이어지는 기본 흐름', 'main·develop·feature·release·hotfix 브랜치와 커밋 메시지가 각각 무엇을 맡는지', '필요할 때만 한 단계씩 더 깊이: 릴리스·긴급 수정, 커밋 메시지 형식, 이력 다듬기, 대안 전략']
   },
 
   sources: [
