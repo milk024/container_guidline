@@ -524,10 +524,14 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .source-use { color: var(--muted); font-size: 12.5px; }
 #internal-refs h3.pane-h { margin: 24px 0 10px; }
 .src-none { margin: 0; }
+.checked-note { margin-top: 14px; }
 .src-type { display: inline-block; margin-left: 6px; padding: 1px 7px; border: 1px solid var(--line-2); border-radius: 999px; font: 600 12px/1.5 var(--sans); color: var(--muted); white-space: nowrap; vertical-align: 1px; }
 .src-type[data-t="doc"] { color: var(--lav-hi); border-color: var(--lav-3); }
 .src-type[data-t="std"] { color: var(--soft); }
 #internal-refs ul { padding-left: 20px; font-size: 13px; color: var(--soft); }
+.internal-box { margin-top: 4px; padding: 12px 14px; border: 1px dashed var(--line-2); border-radius: 10px; background: rgba(255,255,255,.02); }
+.internal-box .source-use { margin: 10px 0 0; }
+.internal-notice { margin: 0 0 10px; font-size: 12.5px; font-weight: 600; color: var(--muted); }
 
 /* ---------------- 반응형 ---------------- */
 @media (max-width: 899px) {

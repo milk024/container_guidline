@@ -567,8 +567,8 @@
     var refs = Array.isArray(data.internalRefs) ? data.internalRefs.filter(isStr) : [];
     box.appendChild(el('h3', { class: 'pane-h', text: '내부 참고 자료' }));
     if (refs.length) {
-      box.appendChild(el('ul', { class: 'source-list' }, refs.map(function (r) { return el('li', { text: r }); })));
-      if (isStr(data.internalNote)) box.appendChild(el('p', { class: 'source-use', text: data.internalNote }));
+      var ib = box.appendChild(el('div', { class: 'internal-box' }, [el('p', { class: 'internal-notice', text: '외부 공개되지 않은 학습 맥락 자료이며, 설명의 근거가 아님' }), el('ul', { class: 'source-list' }, refs.map(function (r) { return el('li', { text: r }); }))]));
+      if (isStr(data.internalNote)) ib.appendChild(el('p', { class: 'source-use', text: data.internalNote }));
     } else box.appendChild(none());
   }
 
