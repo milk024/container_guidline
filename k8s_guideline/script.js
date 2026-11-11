@@ -1069,8 +1069,8 @@
     }
     h.classList.remove('is-key');
     h.textContent = state.flow >= 0 ? '오른쪽 패널에서 단계를 넘기며 따라가 보세요'
-      : !state.viewId && window.GUIDE_SCENE ? '영역을 누르면 들어갑니다 · 포인터를 올리면 핵심 한 줄'
-        : '구성 요소를 눌러 자세히 보기';
+      : !state.viewId && window.GUIDE_SCENE ? '영역을 고르면 핵심 한 줄 · 고른 영역을 누르면 들어갑니다'
+        : '구성 요소를 고르면 핵심 한 줄 · 고른 것을 누르면 자세히';
   }
 
   function activate(id, opener) {
@@ -1823,18 +1823,28 @@
     var n = t.closest && t.closest('[data-id]');
     return n ? n.getAttribute('data-id') : null;
   }
+  // 터치에는 올려 두기가 없으니 첫 탭은 '고르기'(핵심 한 줄 표시), 고른 것을 한 번 더 누르면 실행한다.
+  // 마우스는 올리면, 키보드는 포커스하면 이미 고른 상태라 한 번에 실행된다.
+  var lastPtr = 'mouse';
+  function pick(id, opener) {
+    if (lastPtr === 'touch' && state.hotId !== id) { setHot(id); return; }
+    activate(id, opener);
+  }
   function bindEvents() {
     var board = $('board'), labels = $('labels'), legend = $('legend');
+    document.addEventListener('pointerdown', function (e) { lastPtr = e.pointerType || 'mouse'; }, true);
+    document.addEventListener('keydown', function () { lastPtr = 'key'; }, true);
     // 장면(마우스·터치)
     board.addEventListener('click', function (e) {
       var id = idFrom(e.target);
-      if (id) { activate(id, document.querySelector('#labels .lbl[data-id="' + id + '"]')); return; }
+      if (id) { pick(id, document.querySelector('#labels .lbl[data-id="' + id + '"]')); return; }
+      if (lastPtr === 'touch') setHot(null);
     });
     board.addEventListener('mouseover', function (e) { setHot(idFrom(e.target)); });
     board.addEventListener('mouseleave', function () { setHot(null); });
     // 라벨·목록(키보드 경로)
     [labels, legend].forEach(function (box) {
-      box.addEventListener('click', function (e) { var b = e.target.closest('button[data-id]'); if (b) activate(b.getAttribute('data-id'), b); });
+      box.addEventListener('click', function (e) { var b = e.target.closest('button[data-id]'); if (b) pick(b.getAttribute('data-id'), b); });
       box.addEventListener('mouseover', function (e) { var b = e.target.closest('[data-id]'); setHot(b ? b.getAttribute('data-id') : null); });
       box.addEventListener('mouseleave', function () { setHot(null); });
       box.addEventListener('focusin', function (e) { var b = e.target.closest('[data-id]'); if (b) setHot(b.getAttribute('data-id')); });
