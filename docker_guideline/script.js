@@ -1928,6 +1928,8 @@
         if (!$('drawer').hidden) { closeDrawer(); return; }
         if (state.flow >= 0) { closeFlow(); return; }
         if (state.viewId) { up(); return; }
+        // 맨 위 화면에서는 왼쪽 위 '전체 지도'와 같이 허브로 나간다(Esc = 언제나 한 단계 뒤로)
+        location.href = HUB;
         return;
       }
       if (state.modal) {
