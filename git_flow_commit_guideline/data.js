@@ -7,9 +7,10 @@ window.GUIDE_DATA = {
   meta: {
     id: 'gitflow',
     eyebrow: '협업·버전 관리',
-    title: 'Git Flow 브랜치 전략과 커밋 규칙',
+    title: 'Git Flow 한눈에 보기',
     subtitle: 'feature → develop → release → main으로 이어지는 브랜치 흐름과, 이력을 읽기 쉽게 만드는 커밋 메시지 규칙을 단계별로 따라갑니다.',
-    checked: '2026-11-09'
+    checked: '2026-11-09',
+    keyPoint: '브랜치 전략과 커밋 규칙 — 브랜치를 어떻게 나누고 합칠지(Git Flow)와, 이력을 읽기 쉽게 커밋 메시지를 어떻게 쓸지(Conventional Commits)를 정한 협업 규칙'
   },
 
   sources: [
