@@ -199,7 +199,7 @@
       var s = state.sources[id];
       if (!s) return;
       if (i) frag.appendChild(document.createTextNode(', '));
-      frag.appendChild(el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title }));
+      frag.appendChild(el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title })); var tb = srcBadge(s.url); if (tb) frag.appendChild(tb);
     });
     return frag;
   }
@@ -537,7 +537,7 @@
     Object.keys(state.sources).forEach(function (id) {
       var s = state.sources[id];
       ol.appendChild(el('li', null, [
-        el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title }),
+        el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title }), srcBadge(s.url),
         isStr(s.use) ? el('span', { class: 'source-use', text: ' — ' + s.use }) : null
       ]));
     });
@@ -558,7 +558,7 @@
       box.appendChild(el('ul', { class: 'source-list logo-credits' }, used.map(function (c) {
         var s = credits[c];
         return el('li', null, [
-          isStr(s.url) && /^https:\/\//.test(s.url) ? el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title }) : el('span', { text: s.title }),
+          isStr(s.url) && /^https:\/\//.test(s.url) ? el('a', { href: s.url, target: '_blank', rel: 'noopener noreferrer', text: s.title }) : el('span', { text: s.title }), isStr(s.url) ? srcBadge(s.url) : null,
           isStr(s.use) ? el('span', { class: 'source-use', text: ' — ' + s.use }) : null
         ]);
       })));
@@ -1781,6 +1781,25 @@
     if (canEnter(id)) { setView(id); return; }
     setView(pathTo(id)[0]);
     later(function () { openModal(id, 0, $('stage')); }, 300);
+  }
+
+  /* 출처 유형 배지 — 지정한 도메인만 분류하고, 목록에 없는 도메인은 배지를 붙이지 않는다 */
+  var SRC_TYPES = {
+    '공식 문서': ['docs.docker.com', 'kubernetes.io', 'developer.hashicorp.com', 'prometheus.io', 'grafana.com', 'git-scm.com', 'docs.github.com', 'docs.gitlab.com', 'helm.sh', 'argo-cd.readthedocs.io', 'www.jenkins.io', 'goharbor.io', 'opentelemetry.io', 'containerd.io', 'docs.kernel.org', 'registry.terraform.io'],
+    '원저자 글': ['nvie.com'],
+    '표준·규격': ['semver.org', 'www.conventionalcommits.org', 'trunkbaseddevelopment.com'],
+    '기타 참고': ['man7.org', 'sre.google'],
+    '소스 저장소': ['github.com']
+  };
+  var SRC_KEY = { '공식 문서': 'doc', '원저자 글': 'author', '표준·규격': 'std', '기타 참고': 'ref', '소스 저장소': 'repo' };
+  function srcType(url) {
+    var m = /^https?:\/\/([^\/:?#]+)/i.exec(url || ''), host = m ? m[1].toLowerCase() : '', hit = null;
+    Object.keys(SRC_TYPES).forEach(function (t) { if (SRC_TYPES[t].indexOf(host) >= 0) hit = t; });
+    return hit;
+  }
+  function srcBadge(url) {
+    var t = srcType(url);
+    return t ? el('span', { class: 'src-type', 'data-t': SRC_KEY[t], text: t }) : null;
   }
 
   function renderGuideNav() {
