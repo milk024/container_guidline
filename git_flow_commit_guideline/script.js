@@ -585,6 +585,9 @@
   function pathTo(id) { var p = []; while (id && state.nodes[id]) { p.unshift(id); id = state.nodes[id].parentId; } return p; }
   function nd(id) { return state.nodes[id] && state.nodes[id].data; }
   function enOf(id) { var d = nd(id); return (d.en || d.label).toUpperCase(); }
+  // 영문 이름이 한글 이름과 같은 글자면(예: Image / IMAGE) 영문 줄을 따로 보이지 않는다
+  function enDup(id) { var d = nd(id); return !d.en || d.en.toLowerCase() === String(d.label).toLowerCase(); }
+  function enLv(id) { var lv = 'L' + Math.min(3, state.nodes[id].depth); return enDup(id) ? lv : enOf(id) + ' · ' + lv; }
   function keyOf(id) { var d = nd(id); return d.key || d.desc; }
   function kidsOf(id) { return id ? state.nodes[id].childIds : state.rootIds; }
   function siblingsOf(id) { var p = state.nodes[id].parentId; return p ? state.nodes[p].childIds : state.rootIds; }
@@ -844,11 +847,11 @@
       var tipText = nb ? '이웃: ' + d.label + (deep ? ' (눌러서 이동)' : '') : d.label;
       var btn = el('button', {
         type: 'button', class: 'lbl lbl-' + L.side + (nb ? ' lbl-nb' : ''), 'data-id': L.id,
-        'aria-label': (i + 1) + '. ' + tipText + (d.en ? ' (' + d.en + ')' : '') + ' — ' + actionText(L.id)
+        'aria-label': (i + 1) + '. ' + tipText + (!enDup(L.id) ? ' (' + d.en + ')' : '') + ' — ' + actionText(L.id)
       }, [
         el('span', { class: 'lbl-n', 'aria-hidden': 'true', text: String(i + 1) }),
         el('span', { class: 'lbl-txt' }, [
-          d.en ? el('span', { class: 'lbl-en', text: d.en.toUpperCase() }) : null,
+          !enDup(L.id) ? el('span', { class: 'lbl-en', text: d.en.toUpperCase() }) : null,
           el('span', { class: 'lbl-ko', text: d.label })
         ])
       ]);
@@ -858,7 +861,7 @@
       lead.appendChild(line); lead.appendChild(dot);
       legend.appendChild(el('li', null, [el('button', { type: 'button', class: 'lg-btn' + (nb ? ' lbl-nb' : ''), 'data-id': L.id }, [
         el('span', { class: 'lbl-n', text: String(i + 1) }),
-        el('span', { class: 'lbl-txt' }, [d.en ? el('span', { class: 'lbl-en', text: d.en.toUpperCase() }) : null, el('span', { class: 'lbl-ko', text: d.label })]),
+        el('span', { class: 'lbl-txt' }, [!enDup(L.id) ? el('span', { class: 'lbl-en', text: d.en.toUpperCase() }) : null, el('span', { class: 'lbl-ko', text: d.label })]),
         el('span', { class: 'lg-act', text: actionText(L.id) })
       ])]));
       return { L: L, btn: btn, line: line, dot: dot };
@@ -1050,7 +1053,8 @@
   }
   function updateHint() {
     var h = $('hint'), id = state.hotId;
-    if (id && state.nodes[id]) {
+    // 지금 들어가 있는 영역은 위 설명(view-cap)에 이미 나와 있으니 힌트에서 되풀이하지 않는다
+    if (id && state.nodes[id] && id !== state.viewId) {
       h.textContent = '';
       h.appendChild(el('b', { text: nd(id).label }));
       h.appendChild(document.createTextNode(' — ' + keyOf(id)));
@@ -1204,7 +1208,7 @@
     if (!vid) { cap.hidden = true; return; }
     cap.hidden = false;
     var d = nd(vid);
-    cap.appendChild(el('p', { class: 'vc-eyebrow', text: enOf(vid) + ' · L' + Math.min(3, state.nodes[vid].depth) }));
+    cap.appendChild(el('p', { class: 'vc-eyebrow', text: enLv(vid) }));
     cap.appendChild(el('h2', { class: 'vc-title', text: d.label }));
     cap.appendChild(el('p', { class: 'vc-key' }, [richText(keyOf(vid), {}, selfKeys(vid))]));
     cap.appendChild(el('button', { type: 'button', class: 'pill vc-more', 'data-modal': vid, text: '자세히 ›' }));
@@ -1482,7 +1486,7 @@
     $('modal').classList.remove('is-closing'); $('modal-back').classList.remove('is-closing');
     state.modal = { id: id, slide: slide || 0, slides: slidesOf(id), opener: wasOpen ? state.modal.opener : (opener || document.activeElement) };
     var d = nd(id), m = $('modal');
-    $('md-eyebrow').textContent = enOf(id) + ' · L' + Math.min(3, state.nodes[id].depth);
+    $('md-eyebrow').textContent = enLv(id);
     $('md-title').textContent = d.label;
     var chips = $('md-chips');
     chips.textContent = '';
@@ -1545,7 +1549,7 @@
       if (d.key && d.desc && d.desc !== d.key) sl.appendChild(el('p', { class: 'md-desc' }, [richText(d.desc, used, self)]));
     } else if (s.kind === 'child') {
       var c = nd(s.id), cs = selfKeys(s.id), u2 = {};
-      sl.appendChild(el('p', { class: 'md-s-eyebrow', text: pad2(s.n) + ' · ' + enOf(s.id) }));
+      sl.appendChild(el('p', { class: 'md-s-eyebrow', text: pad2(s.n) + (enDup(s.id) ? '' : ' · ' + enOf(s.id)) }));
       sl.appendChild(el('h3', { class: 'md-s-title', text: c.label }));
       sl.appendChild(el('p', { class: 'md-lead' }, [richText(keyOf(s.id), u2, cs)]));
       if (c.key && c.desc !== c.key) sl.appendChild(el('p', { class: 'md-desc' }, [richText(c.desc, u2, cs)]));
