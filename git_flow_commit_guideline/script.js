@@ -1137,11 +1137,17 @@
       if (a) a.onfinish = function () { endAnim(a); };
     });
   }
+  // 화면 전환은 330ms 뒤에 끝난다. 그 사이 다시 바뀌면 앞선 전환은 버리고 마지막 목표만 남긴다.
+  var viewTok = 0, viewTo, viewEx = null;
+  function shownView() { return viewTo !== undefined ? viewTo : state.viewId; }
   function setView(id, focusId) {
     if (id && !state.nodes[id]) id = null;
     if (id && !canEnter(id)) { var root = pathTo(id)[0]; id = canEnter(root) ? root : null; }
-    if (id === state.viewId) { updateTop(); return; }
-    var stage = $('stage'), wrap = $('board-wrap'), prev = state.viewId;
+    if (id === shownView()) { updateTop(); return; }
+    var stage = $('stage'), wrap = $('board-wrap'), prev = shownView();
+    var tok = ++viewTok;
+    endAnim(viewEx);
+    viewTo = id;
     var pNew = id ? pathTo(id) : [], pOld = prev ? pathTo(prev) : [];
     var dir = (prev === null || pNew.indexOf(prev) >= 0) && pNew.length > pOld.length ? 'in'
       : (id === null || pOld.indexOf(id) >= 0) ? 'out' : 'side';
@@ -1162,8 +1168,10 @@
       wrap.style.transformOrigin = '50% 50%';
       exitFrames = [{ opacity: 1, transform: 'none' }, { opacity: 0, transform: 'translateX(-60px)' }];
     }
-    var ex = anim(wrap, exitFrames, 340);
+    var ex = viewEx = anim(wrap, exitFrames, 340);
     later(function () {
+      if (tok !== viewTok) return;
+      viewTo = undefined; viewEx = null;
       state.viewId = id;
       state.hotId = null;
       renderView();
@@ -1195,7 +1203,7 @@
       updateHint();
     }, 330);
   }
-  function up() { if (state.viewId) setView(state.nodes[state.viewId].parentId, state.viewId); }
+  function up() { var v = shownView(); if (v) setView(state.nodes[v].parentId, v); }
 
   // 지금 보는 위치를 주소 뒤(#)에 남겨 새로고침해도 유지. file:// 등에서 막히면 무시한다.
   function saveHash() {
@@ -1395,7 +1403,7 @@
     // 단계 대상이 세부 항목이면 그 영역 안으로, 최상위 항목이면 전체 장면으로 옮긴다.
     // 화면이 바뀌면 renderView가 새 장면에서 지금 단계를 다시 비춘다.
     var want = stepView(s.node);
-    if (want !== state.viewId) setView(want);
+    if (want !== shownView()) setView(want);
     else applyFlow(!first && prevStep !== i ? prevStep : null);
     updateHint();
   }
@@ -1955,7 +1963,7 @@
         if (state.modal) { closeModal(); return; }
         if (!$('drawer').hidden) { closeDrawer(); return; }
         if (state.flow >= 0) { closeFlow(); return; }
-        if (state.viewId) { up(); return; }
+        if (shownView()) { up(); return; }
         // 맨 위 화면에서는 왼쪽 위 '전체 지도'와 같이 허브로 나간다(Esc = 언제나 한 단계 뒤로)
         location.href = HUB;
         return;
@@ -1969,7 +1977,7 @@
       }
       if (!$('drawer').hidden) { trapFocus(e, $('drawer')); return; }
       if (typingField) return;
-      if (e.key === 'Backspace' && state.viewId && state.flow < 0) { e.preventDefault(); up(); return; }
+      if (e.key === 'Backspace' && shownView() && state.flow < 0) { e.preventDefault(); up(); return; }
       if (state.flow >= 0 && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) {
         e.preventDefault();
         goStep(state.step + (e.key === 'ArrowRight' ? 1 : -1));
