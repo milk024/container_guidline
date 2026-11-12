@@ -1562,12 +1562,16 @@
       var name = s.kind === 'overview' ? '개요' : s.kind === 'example' ? '예시' : nd(s.id).label;
       dots.appendChild(el('button', { type: 'button', class: 'md-dot', 'data-slide': i, 'aria-label': (i + 1) + '. ' + name }));
     });
-    // 아래 버튼: 들어가기(최상위 영역만) · 다음 주제
+    // 아래 버튼: 들어가기(최상위 영역만) · 다음 주제(같은 영역 안) · 다음 챕터(다음 최상위 영역)
     var act = $('md-actions');
     act.textContent = '';
-    if (canEnter(id) && id !== state.viewId) act.appendChild(el('button', { type: 'button', class: 'nav-btn md-go', 'data-view': id }, ['들어가기', svgHtml(ARROW_R)]));
-    var sib = siblingsOf(id), k = sib.indexOf(id), nx = sib[k + 1];
-    if (nx) act.appendChild(el('button', { type: 'button', class: 'tv-btn tv-btn--next md-nexttopic', 'data-modal': nx }, ['다음 주제 ' + (k + 2), svgHtml(ARROW_R)]));
+    if (canEnter(id) && id !== shownView()) act.appendChild(el('button', { type: 'button', class: 'nav-btn md-go', 'data-view': id }, ['들어가기', svgHtml(ARROW_R)]));
+    var root = pathTo(id)[0], ch = state.rootIds[state.rootIds.indexOf(root) + 1];
+    if (id !== root) {
+      var sib = siblingsOf(id), k = sib.indexOf(id), nx = sib[k + 1];
+      if (nx) act.appendChild(el('button', { type: 'button', class: 'tv-btn tv-btn--next md-nexttopic', 'data-modal': nx }, ['다음 주제 ' + (k + 2) + ': ' + nd(nx).label, svgHtml(ARROW_R)]));
+    }
+    if (ch) act.appendChild(el('button', { type: 'button', class: 'nav-btn md-chapter', 'data-chapter': ch }, ['다음 챕터: ' + nd(ch).label, svgHtml(ARROW_R)]));
     $('modal-back').hidden = false;
     m.hidden = false;
     document.body.classList.add('modal-open');
@@ -1633,7 +1637,7 @@
     // 안내는 실제로 넘길 수 있을 때만, 지금 위치와 함께 보여 준다
     var hint = $('md-hint'), n = M.slides.length;
     hint.textContent = '';
-    var mk = n > 1 ? [[['←', '→'], '넘기기 ' + (i + 1) + ' / ' + n], [['Esc'], '닫기']] : [[['Esc'], '닫기']];
+    var mk = n > 1 ? [[['←', '→'], '장 넘기기 ' + (i + 1) + ' / ' + n], [['Esc'], '닫기']] : [[['Esc'], '닫기']];
     hint.appendChild(keysLine(mk, 'kbd-inline'));
   }
 
@@ -1921,6 +1925,8 @@
       var t = e.target;
       var m = t.closest('[data-modal]');
       if (m) { openModal(m.getAttribute('data-modal'), 0, m); return; }
+      var cp = t.closest('.md-chapter');
+      if (cp) { var c = cp.getAttribute('data-chapter'); if (shownView() && canEnter(c)) setView(c); openModal(c, 0); return; }
       var go = t.closest('.md-go');
       if (go) { var v = go.getAttribute('data-view'); closeModal(); setView(v); return; }
       var sl = t.closest('#modal [data-slide]');

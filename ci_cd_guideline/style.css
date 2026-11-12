@@ -82,8 +82,8 @@ button { font: inherit; color: inherit; }
 .nav-btn svg { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--lav); stroke-width: 2.2; transition: transform .2s var(--ease); }
 .nav-btn:hover { border-color: var(--lav); background: hsl(var(--h) 50% 22% / .95); }
 .stage-up:hover svg { transform: translateX(-3px); }
-.md-go { padding: 6px 12px 6px 16px; }
-.md-go:hover svg { transform: translateX(3px); }
+.md-go, .md-chapter { padding: 6px 12px 6px 16px; }
+.md-go:hover svg, .md-chapter:hover svg { transform: translateX(3px); }
 .stage-up b { color: var(--lav); font-weight: 700; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .stage-up kbd { margin-left: 2px; padding: 1px 6px; border: 1px solid hsl(var(--h) 95% 75% / .5); border-radius: 6px; color: var(--text); font: 600 12px var(--mono); }
 @keyframes upIn { from { opacity: 0; transform: translateX(-16px); } }
