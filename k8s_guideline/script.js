@@ -1199,7 +1199,9 @@
       }
       var f = focusId || prev;
       var lb = f && document.querySelector('#labels .lbl[data-id="' + f + '"]:not([aria-hidden])');
-      if (lb && document.activeElement && document.activeElement !== document.body) lb.focus();
+      // 흐름 패널·대화상자·서랍에 있는 포커스는 가져오지 않는다(전환 중에 그쪽으로 옮겨 갔을 수 있다)
+      var ae = document.activeElement;
+      if (lb && ae && ae !== document.body && !(ae.closest && ae.closest('#tours, #modal, #drawer'))) lb.focus();
       updateHint();
     }, 330);
   }
