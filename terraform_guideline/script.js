@@ -848,7 +848,13 @@
     box.textContent = ''; legend.textContent = '';
     var lead = svg('svg', { class: 'leaders', 'aria-hidden': 'true', focusable: 'false' });
     box.appendChild(lead);
-    state.labels = state.kit.labels.map(function (L, i) {
+    // 번호는 장면을 그린 순서가 아니라 주제 순서(data.js 순서)를 따른다. 그래야 설명창의 '다음 주제 N'과 번호가 맞는다.
+    // 주제가 아닌 라벨(지금 영역 자신·이웃)은 주제 뒤에 그린 순서대로 붙인다.
+    var sib = state.viewId ? state.nodes[state.viewId].childIds : state.rootIds;
+    var rank = function (L, i) { var k = sib.indexOf(L.id); return k >= 0 ? k : sib.length + i; };
+    var ordered = state.kit.labels.map(function (L, i) { return { L: L, r: rank(L, i) }; })
+      .sort(function (a, b) { return a.r - b.r; }).map(function (o) { return o.L; });
+    state.labels = ordered.map(function (L, i) {
       var d = nd(L.id), nb = !!state.kit.nb[L.id], deep = state.nodes[L.id].childIds.length > 0;
       var tipText = nb ? '이웃: ' + d.label + (deep ? ' (눌러서 이동)' : '') : d.label;
       var btn = el('button', {
