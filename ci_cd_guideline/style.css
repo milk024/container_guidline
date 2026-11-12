@@ -568,3 +568,11 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
   *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; scroll-behavior: auto !important; }
   .link.flowing, .glow, .tv-where::before, .tv-node.is-on span, .tour-item:hover .ti-route i, .tv-step__text.is-typing::after { animation: none !important; }
 }
+
+/* 키 안내 — 키보드가 있는 기기에서만 보인다 */
+.kbd-hint { margin: 8px 0 0; font-size: 12px; color: var(--muted); line-height: 1.8; text-align: center; }
+.kbd-hint kbd { display: inline-block; min-width: 1.9em; margin: 0 2px; padding: 1px 6px; font: 600 12px/1.5 var(--mono); color: var(--soft); text-align: center; background: var(--panel-2); border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 5px; }
+.tv-nav + .kbd-hint { text-align: left; }
+.md-hint .kbd-hint { margin: 0; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tours__how { margin: 0 0 14px; font-size: 12.5px; color: var(--soft); }
+@media (hover: none) and (pointer: coarse) { .kbd-hint { display: none; } }

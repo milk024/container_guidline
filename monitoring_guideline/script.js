@@ -584,6 +584,16 @@
   }
 
 
+  // 키 안내 한 줄: [['←','→'], '설명'] 묶음을 '·'로 잇는다. 터치 기기에서는 CSS가 감춘다.
+  function keysLine(pairs, cls) {
+    var p = el('p', { class: 'kbd-hint' + (cls ? ' ' + cls : '') });
+    pairs.forEach(function (pr, i) {
+      if (i) p.appendChild(document.createTextNode(' · '));
+      pr[0].forEach(function (k) { p.appendChild(el('kbd', { text: k })); });
+      p.appendChild(document.createTextNode(' ' + pr[1]));
+    });
+    return p;
+  }
 
   /* ---------------- 공통 보조 ---------------- */
   function each(sel, fn) { Array.prototype.forEach.call(document.querySelectorAll(sel), fn); }
@@ -1063,8 +1073,18 @@
     }
     updateHint();
   }
+  // 장면 아래 키 안내: 지금 화면에서 Esc가 어디로 가는지까지 알려 준다
+  function renderKeys() {
+    var box = $('keys');
+    if (!box) return;
+    box.textContent = '';
+    // 흐름을 보는 중에는 흐름 패널의 버튼 바로 아래에 같은 안내가 있으니 여기서는 되풀이하지 않는다
+    if (state.flow >= 0) return;
+    box.appendChild(keysLine([[['Tab'], '구성 요소 고르기'], [['Enter'], state.viewId ? '자세히' : '들어가기'], [['Esc'], state.viewId ? '한 단계 위로' : '전체 지도로']]));
+  }
   function updateHint() {
     var h = $('hint'), id = state.hotId;
+    renderKeys();
     // 지금 들어가 있는 영역은 위 설명(view-cap)에 이미 나와 있으니 힌트에서 되풀이하지 않는다
     if (id && state.nodes[id] && id !== state.viewId) {
       h.textContent = '';
@@ -1244,6 +1264,7 @@
       box.appendChild(el('ul', { class: 'tours__learn' }, m.learn.filter(isStr).slice(0, 3).map(function (t) { return el('li', { text: t }); })));
     }
     if (!state.flows.length) { box.appendChild(el('p', { class: 'tours__lead', text: '표시할 흐름 데이터가 없습니다.' })); return; }
+    box.appendChild(el('p', { class: 'tours__how', text: '흐름을 고르면 장면 위에서 한 단계씩 따라갑니다.' }));
     // 묶음: 기본 흐름(at 없음) → at 노드별
     var groups = [{ title: '기본 흐름', list: [] }], byAt = {};
     state.flows.forEach(function (f, i) {
@@ -1321,6 +1342,7 @@
     var prev = el('button', { type: 'button', class: 'tv-btn tv-btn--prev', id: 'tv-prev', 'aria-label': '이전 단계' }, [svgHtml(ARROW_L)]);
     var next = el('button', { type: 'button', class: 'tv-btn tv-btn--next', id: 'tv-next' }, [el('span', { id: 'tv-next-t', text: '다음' }), svgHtml(ARROW_R)]);
     box.appendChild(el('div', { class: 'tv-nav' }, [prev, el('span', { class: 'tv-count', id: 'tv-count' }), next]));
+    box.appendChild(keysLine([[['←', '→'], '이전·다음 단계'], [['Esc'], '흐름 목록으로']]));
     prev.addEventListener('click', function () { goStep(state.step - 1); });
     next.addEventListener('click', function () {
       if (state.step < f.steps.length - 1) { goStep(state.step + 1); return; }
@@ -1601,8 +1623,9 @@
     $('md-next').disabled = i === M.slides.length - 1;
     // 안내는 실제로 넘길 수 있을 때만, 지금 위치와 함께 보여 준다
     var hint = $('md-hint'), n = M.slides.length;
-    hint.hidden = n < 2;
-    hint.textContent = '← → 키나 아래 점으로 넘겨 보세요 · ' + (i + 1) + ' / ' + n;
+    hint.textContent = '';
+    var mk = n > 1 ? [[['←', '→'], '넘기기 ' + (i + 1) + ' / ' + n], [['Esc'], '닫기']] : [[['Esc'], '닫기']];
+    hint.appendChild(keysLine(mk, 'kbd-inline'));
   }
 
   // 분해 그림: 하위 요소를 위아래로 띄워 쌓은 판(5개 이하) 또는 격자 블록(6개 이상), 없으면 블록 하나
