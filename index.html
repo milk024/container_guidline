@@ -58,7 +58,6 @@
     .lbl-line { stroke: rgba(255, 255, 255, .35); stroke-width: 1; fill: none; }
     .tile.is-on .lbl-en { fill: #fff; }
     .tile.is-on .lbl-ko { fill: var(--soft); }
-    .track { fill: none; stroke: rgba(255, 255, 255, .2); stroke-width: 1.4; stroke-dasharray: 4 7; }
     .hint { margin: 4px 0 0; min-height: 1.6em; text-align: center; color: var(--muted); font-size: 15px; }
     .hint b { color: var(--text); font-weight: 600; }
 
@@ -162,7 +161,7 @@
     var NARROW = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
 
     var svgEl = document.getElementById('map-svg'), map = document.getElementById('map'), hint = document.getElementById('hint');
-    var tiles = [], P = [], cur = -1;
+    var tiles = [], cur = -1;
 
     // 넓은 화면: 01 → 06 을 왼쪽에서 오른쪽으로, 높낮이를 번갈아 띄운다(이름표는 높은 판은 위, 낮은 판은 아래)
     // 좁은 화면: 같은 순서를 위에서 아래로, 좌우를 번갈아 놓고 이름표는 반대쪽에 둔다
@@ -179,11 +178,7 @@
       var Y = layout(), ref = document.activeElement, refI = ref && ref.getAttribute ? ref.getAttribute('data-i') : null;
       svgEl.textContent = '';
       svgEl.setAttribute('viewBox', '0 0 ' + Y.w + ' ' + Y.h);
-      tiles = []; P = [];
-      var deco = s('g', { 'aria-hidden': 'true' }, svgEl);
-      // 흐름 길: 넓은 화면은 바닥 그림자 가운데를, 좁은 화면은 판 가운데를 잇는다(판 뒤로 지나감)
-      Y.L.forEach(function (o) { P.push(Y.narrow ? [o.cx, o.cy] : [o.cx, o.gy]); });
-      s('polyline', { 'class': 'track', points: pts(P) }, deco);
+      tiles = [];
       Y.L.forEach(function (o, i) {
         var g = G[i];
         var t = s('a', { 'class': 'tile', href: g.href, style: '--h:' + g.h, 'data-i': i, 'aria-label': '0' + (i + 1) + '. ' + g.ti + ' — ' + g.eb + (g.start ? ' (처음이라면 여기부터)' : '') }, svgEl);
