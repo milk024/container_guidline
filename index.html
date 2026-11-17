@@ -10,7 +10,6 @@
     :root {
       --h: 226;
       --lav: hsl(var(--h) 95% 85%);
-      --lav-3: hsl(var(--h) 95% 66%);
       --text: #ecebf1; --muted: #84838c; --soft: #c9c7d3;
       --line: rgba(255, 255, 255, .1); --line-2: rgba(255, 255, 255, .18);
       --ease: cubic-bezier(0.22, 1, 0.36, 1);
@@ -27,83 +26,80 @@
     }
     [hidden] { display: none !important; }
     :focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
-    .glow { position: fixed; inset: -25% -10% auto auto; width: 70vw; height: 70vw; pointer-events: none; background: radial-gradient(closest-side, hsl(var(--h) 90% 60% / .15), transparent 70%); transition: background .6s var(--ease); animation: breathe 9s var(--ease) infinite alternate; }
-    @keyframes breathe { from { opacity: .55; transform: scale(.94); } to { opacity: 1; transform: scale(1.04); } }
-    .wrap { position: relative; max-width: 1240px; margin: 0 auto; padding: 32px 24px 48px; }
-    .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .eyebrow { margin: 0; font: 600 12px/1.4 var(--mono); letter-spacing: .26em; color: var(--lav); }
-    .pill { min-height: 34px; padding: 6px 14px; border: 1px solid var(--line-2); border-radius: 999px; background: none; color: var(--soft); font: inherit; font-size: 13px; cursor: pointer; }
-    h1 { margin: 22px 0 10px; font-size: clamp(28px, 4.4vw, 46px); line-height: 1.2; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; }
-    .lead { margin: 0; max-width: 640px; color: var(--muted); font-size: 15px; text-wrap: pretty; }
-    .grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: center; margin-top: 18px; }
-    .map { position: relative; width: 100%; }
+    .glow { position: fixed; left: 50%; top: 58%; width: 90vw; height: 70vh; transform: translate(-50%, -50%); pointer-events: none; background: radial-gradient(closest-side, hsl(var(--h) 60% 45% / .22), transparent 75%); transition: background .6s var(--ease); animation: breathe 9s var(--ease) infinite alternate; }
+    @keyframes breathe { from { opacity: .6; } to { opacity: 1; } }
+    .wrap { position: relative; max-width: 1280px; margin: 0 auto; padding: 32px 24px 48px; }
+    .eyebrow { margin: 0; text-align: center; font: 600 12px/1.4 var(--mono); letter-spacing: .32em; color: var(--soft); }
+    h1 { margin: 18px auto 10px; text-align: center; font-size: clamp(26px, 4vw, 42px); line-height: 1.2; font-weight: 800; letter-spacing: -.02em; text-wrap: balance; }
+    .lead { margin: 0 auto; max-width: 720px; text-align: center; color: var(--muted); font-size: 15px; text-wrap: pretty; }
+    .lead b { color: var(--text); font-weight: 600; }
+
+    /* 입체 지도: 01 → 06 을 왼쪽에서 오른쪽으로(좁은 화면은 위에서 아래로) */
+    .map { position: relative; margin-top: 12px; }
+    .map:focus { outline: none; }
     .map svg { display: block; width: 100%; height: auto; overflow: visible; }
-    .ft { stroke: hsl(var(--h) 60% 75% / .6); stroke-width: 1; stroke-linejoin: round; fill: hsl(var(--h) 30% 15%); }
-    .fa { stroke: hsl(var(--h) 60% 75% / .6); stroke-width: 1; stroke-linejoin: round; fill: hsl(var(--h) 30% 7%); }
-    .fb { stroke: hsl(var(--h) 60% 75% / .6); stroke-width: 1; stroke-linejoin: round; fill: hsl(var(--h) 30% 10%); }
-    .tile { cursor: pointer; transition: transform .4s var(--ease), filter .4s var(--ease), opacity .4s; }
-    .tile .ttx { fill: hsl(var(--h) 95% 85%); font: 700 13px var(--mono); letter-spacing: .16em; }
-    .tile .tnum { fill: hsl(var(--h) 95% 85% / .5); font: 600 12px var(--mono); letter-spacing: .2em; }
-    .tile.is-on { transform: translateY(-10px); filter: drop-shadow(0 0 18px hsl(var(--h) 90% 70% / .55)); }
-    .tile.is-on .ft { fill: hsl(var(--h) 50% 26%); stroke: hsl(var(--h) 95% 92%); }
-    .map.has-on .tile:not(.is-on) { opacity: .45; }
-    .road { fill: none; stroke: rgba(255, 255, 255, .22); stroke-width: 1.4; stroke-dasharray: 4 6; animation: dash 1.6s linear infinite; }
-    @keyframes dash { to { stroke-dashoffset: -20; } }
+    .ft, .fa, .fb { stroke-width: 1.2; stroke-linejoin: round; transition: fill .3s, stroke .3s; }
+    .ft { fill: #121214; stroke: rgba(255, 255, 255, .62); }
+    .fa { fill: #0a0a0b; stroke: rgba(255, 255, 255, .5); }
+    .fb { fill: #070708; stroke: rgba(255, 255, 255, .5); }
+    .shadow { fill: rgba(255, 255, 255, .025); stroke: rgba(255, 255, 255, .14); stroke-width: 1; }
+    .drop { stroke: rgba(255, 255, 255, .28); stroke-width: 1; stroke-dasharray: 3 5; }
+    .sym { fill: none; stroke: hsl(var(--h) 85% 72%); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: stroke .3s; }
+    .sym .dotf { fill: hsl(var(--h) 85% 72%); stroke: none; }
+    .tile { cursor: pointer; outline: none; }
+    .tile .lift { transition: transform .45s var(--ease), filter .45s var(--ease); }
+    .tile.is-on .lift { transform: translateY(-12px); filter: drop-shadow(0 0 16px hsl(var(--h) 90% 65% / .55)); }
+    .tile.is-on .ft { fill: hsl(var(--h) 40% 15%); stroke: hsl(var(--h) 95% 88%); }
+    .tile.is-on .sym { stroke: hsl(var(--h) 95% 86%); }
+    .tile:focus-visible .ft { stroke: #fff; stroke-width: 2.4; }
+    .map.has-on .tile:not(.is-on) { opacity: .4; }
+    .tile { transition: opacity .35s; }
+    .lbl-en { fill: #8e8d95; font: 800 26px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; letter-spacing: .14em; transition: fill .3s; }
+    .lbl-ko { fill: #8e8d95; font-size: 16px; transition: fill .3s; }
+    .lbl-no { fill: hsl(var(--h) 85% 72%); font: 700 13px var(--mono); letter-spacing: .2em; }
+    .lbl-start { fill: hsl(var(--h) 95% 82%); font-size: 13px; font-weight: 600; }
+    .lbl-line { stroke: rgba(255, 255, 255, .35); stroke-width: 1; fill: none; }
+    .tile.is-on .lbl-en { fill: #fff; }
+    .tile.is-on .lbl-ko { fill: var(--soft); }
+    .track { fill: none; stroke: rgba(255, 255, 255, .2); stroke-width: 1.4; stroke-dasharray: 4 7; animation: dash 1.6s linear infinite; }
+    @keyframes dash { to { stroke-dashoffset: -22; } }
+    .chev { fill: none; stroke: rgba(255, 255, 255, .45); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
     .runner { fill: #fff; filter: drop-shadow(0 0 6px #fff); }
-    .base .ft { fill: #08080c; stroke: rgba(255, 255, 255, .12); }
-    .base .fa, .base .fb { fill: #040406; stroke: rgba(255, 255, 255, .1); }
-    .list { list-style: none; margin: 0; padding: 0 0 0 22px; border-left: 1px solid var(--line); display: grid; gap: 8px; }
-    .card { --h: 226; display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border: 1px solid var(--line); border-radius: 16px; color: inherit; text-decoration: none; background: rgba(255, 255, 255, .02); transition: border-color .2s, background .2s; animation: slideIn .6s var(--ease) both; }
-    .card:hover, .card.is-on, .card:focus-visible { border-color: hsl(var(--h) 95% 70%); background: hsl(var(--h) 90% 80% / .08); }
-    @keyframes slideIn { from { opacity: 0; transform: translateX(14px); } }
-    .num { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; border: 1px solid hsl(var(--h) 95% 70%); color: hsl(var(--h) 95% 85%); font: 700 12px var(--mono); }
-    .c-eb { display: block; font: 600 12px/1.4 var(--mono); letter-spacing: .2em; color: hsl(var(--h) 95% 80%); }
-    .c-ti { display: block; font-size: 16px; font-weight: 700; margin: 2px 0; }
-    .c-go { font: 600 12px var(--mono); color: hsl(var(--h) 95% 80%); white-space: nowrap; }
+    .hint { margin: 4px 0 0; min-height: 1.6em; text-align: center; color: var(--muted); font-size: 15px; }
+    .hint b { color: var(--text); font-weight: 600; }
+    .foot { margin-top: 28px; text-align: center; font-size: 12px; color: var(--muted); }
+
     body { animation: pageIn .5s var(--ease) both; }
     @keyframes pageIn { from { opacity: 0; } }
     html.is-leaving body { opacity: 0; transition: opacity .3s ease .05s; }
-    html.is-leaving .map { transform: scale(1.12); transition: transform .35s var(--ease); }
-    html.is-leaving .tile.is-on { transform: translateY(-24px) scale(1.06); }
-    .lead b { color: var(--text); font-weight: 600; }
-    .c-start { display: inline-block; margin-left: 6px; padding: 1px 8px; border: 1px solid hsl(var(--h) 95% 70%); border-radius: 999px; font: 600 12px/1.5 inherit; letter-spacing: 0; color: hsl(var(--h) 95% 85%); vertical-align: 1px; }
-    .foot { margin-top: 28px; font-size: 12px; color: var(--muted); }
-    @media (max-width: 899px) {
+    html.is-leaving .map svg { transform: scale(1.08); transition: transform .35s var(--ease); }
+    html.is-leaving .tile.is-on .lift { transform: translateY(-28px); }
+    @media (max-width: 720px) {
       .wrap { padding: 24px 16px 40px; }
-      .grid { grid-template-columns: minmax(0, 1fr); }
-      .list { padding-left: 0; border-left: 0; }
-    }
-    @media (max-width: 480px) {
-      .wrap { padding: 20px 16px 36px; }
-      .card { grid-template-columns: 34px minmax(0, 1fr); }
-      .c-go { display: none; }
+      .lead, .hint { font-size: 14px; }
     }
     .skip-link { position: absolute; left: 12px; top: -60px; z-index: 100; padding: 8px 14px; background: var(--lav); color: #000; border-radius: 999px; font-weight: 700; text-decoration: none; }
     .skip-link:focus { top: 12px; }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0s !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
-      .glow, .road { animation: none !important; }
+      .glow, .track { animation: none !important; }
     }
   </style>
 </head>
 <body>
-  <a class="skip-link" href="#list">학습 가이드 목록으로 건너뛰기</a>
+  <a class="skip-link" href="#map">학습 가이드 지도로 건너뛰기</a>
   <div class="glow" aria-hidden="true"></div>
   <div class="wrap">
-    <header class="top">
+    <header>
       <p class="eyebrow">INFRA KNOWLEDGE BASE</p>
     </header>
     <main>
       <h1>코드 한 줄이 서비스가 되기까지</h1>
       <p class="lead">브랜치에서 커밋하고(Git), 파이프라인이 빌드·배포하고(CI/CD), 이미지로 포장해(Docker), 인프라를 코드로 만들고(Terraform), 클러스터에서 실행하고(Kubernetes), 상태를 지켜보는(모니터링) <b>01 → 06</b> 여섯 단계를 각각의 입체 장면으로 살펴봅니다. 꼭 순서대로 볼 필요는 없습니다.</p>
-      <div class="grid">
-        <div class="map" id="map" aria-hidden="true">
-          <svg id="map-svg" viewBox="0 0 900 520" focusable="false"></svg>
-        </div>
-        <nav aria-label="학습 가이드">
-          <ol class="list" id="list" tabindex="-1"></ol>
-        </nav>
-      </div>
+      <nav class="map" id="map" tabindex="-1" aria-label="학습 가이드 지도">
+        <svg id="map-svg" focusable="false"></svg>
+      </nav>
+      <p class="hint" id="hint" aria-hidden="true"></p>
       <p class="foot">각 가이드의 설명은 해당 기술의 공식 문서를 근거로 작성했고, 출처는 각 가이드 위쪽의 「출처」에서 볼 수 있습니다. 내용 기준일: 2026-11-09 (Terraform 2026-11-11).</p>
     </main>
   </div>
@@ -119,77 +115,181 @@
       { id: 'k8s', en: 'KUBERNETES', eb: '컨테이너 오케스트레이션', ti: 'Kubernetes 한눈에 보기', href: 'k8s_guideline/index.html', h: 226 },
       { id: 'monitoring', en: 'MONITORING', eb: '관측·알림', ti: 'Monitoring 한눈에 보기', href: 'monitoring_guideline/index.html', h: 30 }
     ];
-    var POS = [[150, 330], [270, 240], [390, 330], [510, 240], [630, 330], [750, 240]];
+    var HINT0 = '탐색할 영역에 포인터를 올려보세요';
 
-    function s(tag, a, p) { var n = document.createElementNS(NS, tag); for (var k in a) n.setAttribute(k, a[k]); if (p) p.appendChild(n); return n; }
+    // 판 윗면에 그리는 기호(윗면 좌표 ±44 안). 각 기술의 상표 대신 하는 일을 단순한 선으로 표시한다.
+    var SYM = [
+      // Git Flow: 두 갈래 브랜치와 커밋 점, 갈라지고 합쳐지는 선
+      function (g) {
+        p(g, 'M-28,-14 H28 M-28,14 H28 M-16,-14 L-4,14 M12,14 L20,-14');
+        [[-16, -14], [20, -14], [-4, 14], [12, 14], [-26, 14]].forEach(function (c) { s('circle', { cx: c[0], cy: c[1], r: 4.2, 'class': 'dotf' }, g); });
+      },
+      // CI/CD: 계속 도는 고리(통합 → 배포 → 다시 통합)
+      function (g) {
+        p(g, 'M0,0 C-8,-16 -30,-16 -30,0 C-30,16 -8,16 0,0 C8,-16 30,-16 30,0 C30,16 8,16 0,0 Z');
+        p(g, 'M20,-15 L27,-11 L21,-5');
+      },
+      // Docker: 차곡차곡 쌓인 컨테이너
+      function (g) {
+        [[-26, 2], [-8, 2], [10, 2], [-17, -14], [1, -14]].forEach(function (c) { s('rect', { x: c[0], y: c[1], width: 16, height: 13, rx: 2 }, g); });
+        p(g, 'M-28,22 H28');
+      },
+      // Terraform: 중괄호 안의 코드 줄(구성 파일)
+      function (g) {
+        p(g, 'M-14,-24 C-24,-24 -18,-4 -28,0 C-18,4 -24,24 -14,24 M14,-24 C24,-24 18,-4 28,0 C18,4 24,24 14,24 M-8,-9 H9 M-8,0 H12 M-8,9 H4');
+      },
+      // Kubernetes: 가운데 제어부와 둘레의 노드들
+      function (g) {
+        var r = 24, i, a;
+        for (i = 0; i < 6; i++) {
+          a = Math.PI / 3 * i;
+          p(g, 'M' + (Math.cos(a) * 8).toFixed(1) + ',' + (Math.sin(a) * 8).toFixed(1) + ' L' + (Math.cos(a) * (r - 5)).toFixed(1) + ',' + (Math.sin(a) * (r - 5)).toFixed(1));
+          s('circle', { cx: (Math.cos(a) * r).toFixed(1), cy: (Math.sin(a) * r).toFixed(1), r: 4.6 }, g);
+        }
+        s('circle', { cx: 0, cy: 0, r: 7.5 }, g);
+      },
+      // Monitoring: 축과 시간에 따라 오르내리는 선
+      function (g) {
+        p(g, 'M-28,-26 V24 H28 M-20,12 L-8,-2 L2,6 L14,-16 L26,-6');
+        s('circle', { cx: 14, cy: -16, r: 4, 'class': 'dotf' }, g);
+      }
+    ];
+
+    function s(tag, a, par) { var n = document.createElementNS(NS, tag); for (var k in a) n.setAttribute(k, a[k]); if (par) par.appendChild(n); return n; }
+    function p(g, d) { return s('path', { d: d }, g); }
     function iso(sx, sy, x, y, z) { return [sx + x - y, sy + (x + y) / 2 - (z || 0)]; }
-    function pts(l) { return l.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' '); }
-    function box(p, sx, sy, w, d, h, z0) {
-      z0 = z0 || 0;
-      var a = w / 2, b = d / 2, z1 = z0 + h;
-      var A = iso(sx, sy, -a, -b, z1), B = iso(sx, sy, a, -b, z1), C = iso(sx, sy, a, b, z1), D = iso(sx, sy, -a, b, z1);
-      s('polygon', { 'class': 'fa', points: pts([D, C, iso(sx, sy, a, b, z0), iso(sx, sy, -a, b, z0)]) }, p);
-      s('polygon', { 'class': 'fb', points: pts([C, B, iso(sx, sy, a, -b, z0), iso(sx, sy, a, b, z0)]) }, p);
-      s('polygon', { 'class': 'ft', points: pts([A, B, C, D]) }, p);
-      return [sx, sy - z1];
+    function pts(l) { return l.map(function (q) { return q[0].toFixed(1) + ',' + q[1].toFixed(1); }).join(' '); }
+    // 판 하나: 아래 두 옆면 + 윗면, 윗면 가운데 좌표를 돌려준다
+    function slab(par, cx, cy, a, th) {
+      var A = iso(cx, cy, -a, -a), B = iso(cx, cy, a, -a), C = iso(cx, cy, a, a), D = iso(cx, cy, -a, a);
+      s('polygon', { 'class': 'fa', points: pts([D, C, [C[0], C[1] + th], [D[0], D[1] + th]]) }, par);
+      s('polygon', { 'class': 'fb', points: pts([C, B, [B[0], B[1] + th], [C[0], C[1] + th]]) }, par);
+      s('polygon', { 'class': 'ft', points: pts([A, B, C, D]) }, par);
     }
-    // 운영체제의 '동작 줄이기'를 따른다(켜면 이동 점·화면 전환 효과를 멈춤)
+    function diamond(cx, cy, a) { return pts([iso(cx, cy, -a, -a), iso(cx, cy, a, -a), iso(cx, cy, a, a), iso(cx, cy, -a, a)]); }
+    function text(par, cls, x, y, anchor, str) { var t = s('text', { 'class': cls, x: x, y: y, 'text-anchor': anchor }, par); t.textContent = str; return t; }
+
     var RM = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null, reduce = !!(RM && RM.matches);
     if (RM) { var onRM = function () { reduce = RM.matches; }; if (RM.addEventListener) RM.addEventListener('change', onRM); else if (RM.addListener) RM.addListener(onRM); }
+    var NARROW = window.matchMedia ? window.matchMedia('(max-width: 720px)') : null;
 
-    var svgEl = document.getElementById('map-svg'), map = document.getElementById('map'), list = document.getElementById('list');
-    var base = s('g', { 'class': 'base' }, svgEl);
-    box(base, 450, 300, 520, 300, 12);
-    var road = s('polyline', { 'class': 'road', points: pts(POS.map(function (p) { return [p[0], p[1] - 22]; })) }, svgEl);
-    var tiles = [], cards = [];
-    G.forEach(function (g, i) {
-      var t = s('g', { 'class': 'tile', style: '--h:' + g.h, 'data-i': i }, svgEl);
-      var top = box(t, POS[i][0], POS[i][1] - 12, 100, 100, 18 + i * 6);
-      var tx = s('g', { transform: 'matrix(1 .5 -1 .5 ' + top[0] + ' ' + top[1] + ')' }, t);
-      s('text', { 'class': 'tnum', x: 0, y: -14, 'text-anchor': 'middle' }, tx).textContent = '0' + (i + 1);
-      s('text', { 'class': 'ttx', x: 0, y: 6, 'text-anchor': 'middle' }, tx).textContent = g.en;
-      t.addEventListener('click', function () { go(i); });
-      t.addEventListener('mouseenter', function () { on(i); });
-      t.addEventListener('mouseleave', function () { on(-1); });
-      tiles.push(t);
-      var li = document.createElement('li');
-      var a = document.createElement('a');
-      a.className = 'card'; a.href = g.href; a.style.setProperty('--h', g.h); a.style.animationDelay = (i * 70) + 'ms';
-      a.innerHTML = '<span class="num" aria-hidden="true">0' + (i + 1) + '</span><span><span class="c-eb"></span><span class="c-ti"></span></span><span class="c-go" aria-hidden="true">›</span>';
-      a.querySelector('.c-eb').textContent = g.en + ' · ' + g.eb;
-      a.querySelector('.c-ti').textContent = g.ti;
-      if (g.start) { var st = document.createElement('span'); st.className = 'c-start'; st.textContent = '처음이라면 여기부터'; a.querySelector('.c-ti').appendChild(st); }
-      a.addEventListener('click', function (e) {
-        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-        e.preventDefault(); go(i);
+    var svgEl = document.getElementById('map-svg'), map = document.getElementById('map'), hint = document.getElementById('hint');
+    var tiles = [], P = [], cur = -1;
+
+    // 넓은 화면: 01 → 06 을 왼쪽에서 오른쪽으로, 높낮이를 번갈아 띄운다(이름표는 높은 판은 위, 낮은 판은 아래)
+    // 좁은 화면: 같은 순서를 위에서 아래로, 좌우를 번갈아 놓고 이름표는 반대쪽에 둔다
+    function layout() {
+      var narrow = !!(NARROW && NARROW.matches), L = [];
+      G.forEach(function (g, i) {
+        if (narrow) L.push({ cx: i % 2 ? 252 : 148, cy: 118 + i * 168, a: 40, th: 12, side: i % 2 ? 'left' : 'right' });
+        else L.push({ cx: 128 + i * 189, cy: i % 2 ? 330 : 238, a: 46, th: 14, gy: 448, side: i % 2 ? 'below' : 'above' });
       });
-      a.addEventListener('mouseenter', function () { on(i); });
-      a.addEventListener('mouseleave', function () { on(-1); });
-      a.addEventListener('focus', function () { on(i); });
-      a.addEventListener('blur', function () { on(-1); });
-      li.appendChild(a); list.appendChild(li); cards.push(a);
-    });
-    // 가이드로 이동: 고른 타일을 띄우고 화면을 흐리게 지운 뒤 이동
+      return { narrow: narrow, w: narrow ? 400 : 1200, h: narrow ? 1100 : 640, L: L };
+    }
+
+    function render() {
+      var Y = layout(), ref = document.activeElement, refI = ref && ref.getAttribute ? ref.getAttribute('data-i') : null;
+      svgEl.textContent = '';
+      svgEl.setAttribute('viewBox', '0 0 ' + Y.w + ' ' + Y.h);
+      tiles = []; P = [];
+      var deco = s('g', { 'aria-hidden': 'true' }, svgEl);
+      // 흐름 길: 넓은 화면은 바닥 그림자 가운데를, 좁은 화면은 판 가운데를 잇는다(판 뒤로 지나감)
+      Y.L.forEach(function (o) { P.push(Y.narrow ? [o.cx, o.cy] : [o.cx, o.gy]); });
+      s('polyline', { 'class': 'track', points: pts(P) }, deco);
+      for (var k = 0; k < P.length - 1; k++) {
+        var mx = (P[k][0] + P[k + 1][0]) / 2, my = (P[k][1] + P[k + 1][1]) / 2;
+        var ang = Math.atan2(P[k + 1][1] - P[k][1], P[k + 1][0] - P[k][0]) * 180 / Math.PI;
+        s('path', { 'class': 'chev', d: 'M-4,-6 L4,0 L-4,6', transform: 'translate(' + mx.toFixed(1) + ' ' + my.toFixed(1) + ') rotate(' + ang.toFixed(1) + ')' }, deco);
+      }
+      var runner = s('circle', { 'class': 'runner', r: 4, cx: P[0][0], cy: P[0][1] }, deco);
+      Y.L.forEach(function (o, i) {
+        var g = G[i];
+        var t = s('a', { 'class': 'tile', href: g.href, style: '--h:' + g.h, 'data-i': i, 'aria-label': '0' + (i + 1) + '. ' + g.ti + ' — ' + g.eb + (g.start ? ' (처음이라면 여기부터)' : '') }, svgEl);
+        var a = o.a, half = a, top = o.cy - half;
+        // 바닥 그림자와 판 모서리에서 내려오는 점선(넓은 화면)
+        if (!Y.narrow) {
+          s('polygon', { 'class': 'shadow', points: diamond(o.cx, o.gy, a) }, t);
+          [[-a * 2, 0], [0, a], [a * 2, 0]].forEach(function (c) {
+            s('line', { 'class': 'drop', x1: o.cx + c[0], y1: o.cy + c[1] + (c[1] ? o.th : o.th), x2: o.cx + c[0], y2: o.gy + c[1] }, t);
+          });
+        }
+        var lift = s('g', { 'class': 'lift' }, t);
+        slab(lift, o.cx, o.cy, a, o.th);
+        var sym = s('g', { 'class': 'sym', transform: 'matrix(1 .5 -1 .5 ' + o.cx + ' ' + o.cy + ') scale(' + (a / 46).toFixed(3) + ')' }, lift);
+        SYM[i](sym);
+        // 이름표: 번호 · 영문 · 밑줄 · 한글 설명
+        var lb = s('g', { 'aria-hidden': 'true' }, t), x, y, an, w = 0;
+        if (Y.narrow) {
+          an = o.side === 'right' ? 'start' : 'end';
+          x = o.side === 'right' ? o.cx + a * 2 + 22 : o.cx - a * 2 - 22;
+          y = o.cy - 18;
+          text(lb, 'lbl-no', x, y - 26, an, '0' + (i + 1));
+          var en = text(lb, 'lbl-en', x, y, an, g.en); en.style.fontSize = '16px';
+          var ko = text(lb, 'lbl-ko', x, y + 46, an, g.eb); ko.style.fontSize = '14px';
+          if (g.start) text(lb, 'lbl-start', x, y + 68, an, '처음이라면 여기부터');
+          var ux = o.side === 'right' ? x - 14 : x + 14;
+          s('path', { 'class': 'lbl-line', d: 'M' + ux + ',' + (y + 14) + ' H' + (o.side === 'right' ? x + 120 : x - 120) + ' M' + ux + ',' + (y + 14) + ' L' + (o.side === 'right' ? o.cx + a : o.cx - a) + ',' + (o.cy + a / 2) }, lb);
+        } else if (o.side === 'above') {
+          x = o.cx; y = top - 70;
+          text(lb, 'lbl-no', x, y - 34, 'middle', '0' + (i + 1));
+          text(lb, 'lbl-en', x, y, 'middle', g.en);
+          text(lb, 'lbl-ko', x, y + 30, 'middle', g.eb);
+          if (g.start) text(lb, 'lbl-start', x, y + 52, 'middle', '처음이라면 여기부터');
+          s('path', { 'class': 'lbl-line', d: 'M' + (x - 80) + ',' + (y + 10) + ' H' + (x + 80) + ' M' + x + ',' + (y + (g.start ? 60 : 38)) + ' V' + (top - 10) }, lb);
+        } else {
+          x = o.cx; y = o.gy + a + 64;
+          text(lb, 'lbl-no', x, y - 34, 'middle', '0' + (i + 1));
+          text(lb, 'lbl-en', x, y, 'middle', g.en);
+          text(lb, 'lbl-ko', x, y + 30, 'middle', g.eb);
+          if (g.start) text(lb, 'lbl-start', x, y + 52, 'middle', '처음이라면 여기부터');
+          s('path', { 'class': 'lbl-line', d: 'M' + (x - 80) + ',' + (y + 10) + ' H' + (x + 80) + ' M' + x + ',' + (o.gy + a + 6) + ' V' + (y - 52) }, lb);
+        }
+        t.addEventListener('click', function (e) {
+          if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+          e.preventDefault(); go(i);
+        });
+        t.addEventListener('mouseenter', function () { on(i); });
+        t.addEventListener('mouseleave', function () { on(-1); });
+        t.addEventListener('focus', function () { on(i); });
+        t.addEventListener('blur', function () { on(-1); });
+        tiles.push(t);
+      });
+      runnerEl = runner;
+      if (refI !== null && tiles[+refI]) tiles[+refI].focus();
+      on(cur);
+    }
+    var runnerEl = null;
+
     function go(i) {
       if (reduce) { location.href = G[i].href; return; }
       on(i);
       document.documentElement.classList.add('is-leaving');
       setTimeout(function () { location.href = G[i].href; }, 340);
     }
-    window.addEventListener('pageshow', function () { document.documentElement.classList.remove('is-leaving'); on(-1); });
     function on(i) {
+      cur = i;
       tiles.forEach(function (t, k) { t.classList.toggle('is-on', k === i); });
-      cards.forEach(function (c, k) { c.classList.toggle('is-on', k === i); });
       map.classList.toggle('has-on', i >= 0);
-      if (i >= 0) document.documentElement.style.setProperty('--h', G[i].h);
+      if (i >= 0) {
+        document.documentElement.style.setProperty('--h', G[i].h);
+        hint.innerHTML = '';
+        var b = document.createElement('b'); b.textContent = '0' + (i + 1) + ' ' + G[i].ti;
+        hint.appendChild(b); hint.appendChild(document.createTextNode(' — 누르면 열립니다'));
+      } else hint.textContent = HINT0;
     }
-    // 길을 따라 움직이는 점(움직임 줄이기면 멈춤)
-    var dot = s('circle', { 'class': 'runner', r: 4 }, svgEl), P = POS.map(function (p) { return [p[0], p[1] - 22]; }), t0 = null;
+    window.addEventListener('pageshow', function () { document.documentElement.classList.remove('is-leaving'); on(-1); });
+    if (NARROW) { if (NARROW.addEventListener) NARROW.addEventListener('change', render); else if (NARROW.addListener) NARROW.addListener(render); }
+    render();
+
+    // 흐름 길을 따라 01 → 06 으로 움직이는 점(동작 줄이기면 멈춤)
+    var t0 = null;
     function frame(ts) {
       if (t0 === null) t0 = ts;
-      var u = reduce ? 0 : ((ts - t0) / 6000) % 1, f = u * (P.length - 1), k = Math.min(P.length - 2, Math.floor(f)), r = f - k;
-      dot.setAttribute('cx', (P[k][0] + (P[k + 1][0] - P[k][0]) * r).toFixed(1));
-      dot.setAttribute('cy', (P[k][1] + (P[k + 1][1] - P[k][1]) * r).toFixed(1));
+      var u = reduce ? 0 : ((ts - t0) / 7000) % 1, f = u * (P.length - 1), k = Math.min(P.length - 2, Math.floor(f)), r = f - k;
+      if (runnerEl) {
+        runnerEl.setAttribute('cx', (P[k][0] + (P[k + 1][0] - P[k][0]) * r).toFixed(1));
+        runnerEl.setAttribute('cy', (P[k][1] + (P[k + 1][1] - P[k][1]) * r).toFixed(1));
+      }
       requestAnimationFrame(frame);
     }
     requestAnimationFrame(frame);
