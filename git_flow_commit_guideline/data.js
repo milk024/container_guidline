@@ -9,7 +9,7 @@ window.GUIDE_DATA = {
     eyebrow: '협업·버전 관리',
     title: 'Git Flow 한눈에 보기',
     subtitle: 'feature → develop → release → main으로 이어지는 브랜치 흐름과, 이력을 읽기 쉽게 만드는 커밋 메시지 규칙을 단계별로 따라갑니다.',
-    checked: '2026-11-09',
+    checked: '2026-11-17',
     keyPoint: '브랜치 전략과 커밋 규칙 — 브랜치를 어떻게 나누고 합칠지(Git Flow)와, 이력을 읽기 쉽게 커밋 메시지를 어떻게 쓸지(Conventional Commits)를 정한 협업 규칙',
     learn: ['feature → develop → release → main으로 이어지는 기본 흐름', 'main·develop·feature·release·hotfix 브랜치와 커밋 메시지가 각각 무엇을 맡는지', '필요할 때만 한 단계씩 더 깊이: 릴리스·긴급 수정, 커밋 메시지 형식, 이력 다듬기, 대안 전략']
   },
@@ -43,9 +43,9 @@ window.GUIDE_DATA = {
     {
       id: 'branches', label: '브랜치 모델', en: 'Git Flow', src: ['nvie', 'book-workflows'],
       desc: '오래 유지하는 브랜치 2개와 목적별 보조 브랜치 3종으로 작업을 나눕니다.',
-      ex: { lang: 'text', code: '브랜치           갈라지는 곳 → 합쳐지는 곳\nmain             (장기) 운영 배포본만 보관\ndevelop          main 에서 1회 생성 → (장기) 다음 릴리스 통합\nfeature/login    develop → develop\nrelease/1.2.0    develop → main + develop\nhotfix/1.2.1     main    → main + develop\nv1.2.0           main 병합 지점에 붙이는 Tag' },
+      ex: { lang: 'text', code: '브랜치           갈라지는 곳 → 합쳐지는 곳\nmain             (장기) 운영 배포본만 보관\ndevelop          main 에서 1회 생성 → (장기) 다음 릴리스 통합\nfeature/login    develop → develop\nrelease/1.2.0    develop → main + develop\nhotfix/1.2.1     main    → main + develop (열린 release 가 있으면 develop 대신 release)\nv1.2.0           main 병합 지점에 붙이는 Tag\n\n# 원문 표기: master · release-* · hotfix-*  (이 가이드는 main · release/ · hotfix/ 로 표기)' },
       children: [
-        { id: 'main', label: 'main', en: 'production branch', src: ['nvie'], desc: '항상 배포 가능한 상태만 담고, 커밋마다 릴리스 버전이 됩니다.',
+        { id: 'main', label: 'main', en: 'production branch', src: ['nvie'], desc: '운영 배포본만 담는 브랜치로, main에 병합될 때마다 그 자체가 새 운영 릴리스입니다.',
           ex: { v: 'main', lang: 'bash', code: 'git switch main\ngit merge --no-ff release/1.2.0\ngit tag -a v1.2.0 -m "release v1.2.0"\ngit push origin main --tags' } },
         { id: 'develop', label: 'develop', en: 'integration branch', src: ['nvie', 'git-switch'], desc: '다음 릴리스에 들어갈 기능이 모이는 통합 브랜치입니다.',
           ex: { v: 'develop', lang: 'bash', code: 'git switch -c develop main      # 저장소마다 최초 1회\ngit push -u origin develop\n\ngit switch develop && git pull  # 작업 시작 전 최신화' } },
@@ -53,19 +53,19 @@ window.GUIDE_DATA = {
           ex: { v: 'feature/login', lang: 'bash', code: 'git switch -c feature/login develop\n# … 커밋 …\ngit switch develop\ngit merge --no-ff feature/login\ngit branch -d feature/login' } },
         { id: 'release', label: 'release/*', en: 'release branch', src: ['nvie'], desc: 'develop에서 갈라져 버전 확정·버그 수정만 한 뒤 main·develop에 병합합니다.',
           ex: { v: 'release/1.2.0', lang: 'bash', code: 'git switch -c release/1.2.0 develop\n# 버전 번호 수정·버그 수정만 (새 기능 금지)\ngit switch main    && git merge --no-ff release/1.2.0\ngit tag -a v1.2.0 -m \"release v1.2.0\"\ngit switch develop && git merge --no-ff release/1.2.0\ngit branch -d release/1.2.0' } },
-        { id: 'hotfix', label: 'hotfix/*', en: 'hotfix branch', src: ['nvie'], desc: '운영 버그를 main에서 바로 갈라 고치고 main·develop에 병합합니다.',
-          ex: { v: 'hotfix/1.2.1', lang: 'bash', code: 'git switch -c hotfix/1.2.1 main\ngit commit -am "fix(payment): 결제 금액 반올림 오류 수정"\ngit switch main    && git merge --no-ff hotfix/1.2.1\ngit tag -a v1.2.1 -m "hotfix v1.2.1"\ngit switch develop && git merge --no-ff hotfix/1.2.1\ngit branch -d hotfix/1.2.1' } },
+        { id: 'hotfix', label: 'hotfix/*', en: 'hotfix branch', src: ['nvie'], desc: '운영 버그를 main에서 바로 갈라 고치고 main·develop에 병합합니다. release 브랜치가 열려 있으면 develop 대신 그 release에 병합합니다.',
+          ex: { v: 'hotfix/1.2.1', lang: 'bash', code: 'git switch -c hotfix/1.2.1 main\ngit commit -am "fix(payment): 결제 금액 반올림 오류 수정"\ngit switch main    && git merge --no-ff hotfix/1.2.1\ngit tag -a v1.2.1 -m "hotfix v1.2.1"\ngit switch develop && git merge --no-ff hotfix/1.2.1   # release/* 가 열려 있으면 그 release 에 병합\ngit branch -d hotfix/1.2.1' } },
         { id: 'tag', label: 'Tag · SemVer', en: 'git tag', src: ['git-tag', 'semver'], desc: 'main 병합 지점에 v1.2.0 같은 MAJOR.MINOR.PATCH 이름을 붙입니다.',
-          ex: { v: 'v1.2.0', lang: 'bash', code: 'git tag -a v1.2.0 -m "release v1.2.0"\ngit push origin main develop --tags\n\n# MAJOR.MINOR.PATCH\n# 2.0.0  호환이 깨지는 변경\n# 1.3.0  호환되는 기능 추가\n# 1.2.1  호환되는 버그 수정' } }
+          ex: { v: 'v1.2.0', lang: 'bash', code: 'git tag -a v1.2.0 -m "release v1.2.0"\ngit push origin main develop --tags\n\n# MAJOR.MINOR.PATCH\n# 2.0.0  호환이 깨지는 변경\n# 1.3.0  호환되는 기능 추가\n# 1.2.1  호환되는 버그 수정\n# 0.y.z  초기 개발 단계: 언제든 바뀔 수 있어 공개 API를 안정적이라 보지 않음' } }
       ]
     },
     {
       id: 'integrate', label: '통합 방식', en: 'Merge', src: ['git-merge', 'gh-merges'],
       desc: '브랜치 작업을 대상 브랜치로 합치는 방법과 그 결과 이력의 모양입니다.',
-      ex: { lang: 'text', code: '# PR #45 : feature/login → develop (리뷰 승인 + CI 통과)\n\n# ① --no-ff 병합 결과: 병합 커밋으로 기능 경계가 남음\n*   a1b2c3d Merge branch \'feature/login\' into develop\n|\\\n| * 9f8e7d6 feat(login): 로그인 폼 추가\n| * 5c4b3a2 feat(login): 세션 저장\n|/\n\n# ② Squash 병합 결과: PR 하나 = 커밋 하나\n* 7e6d5c4 feat(login): 로그인 기능 추가 (#45)\n\n# ③ git rebase develop 후 병합: 일직선 이력\n* 3c2b1a0 feat(login): 세션 저장\n* 2b1a0f9 feat(login): 로그인 폼 추가' },
+      ex: { lang: 'text', code: '# PR #45 : feature/login → develop (리뷰 승인 + CI 통과)\n\n# ① --no-ff 병합 결과: 병합 커밋으로 기능 경계가 남음\n*   a1b2c3d Merge branch \'feature/login\' into develop\n|\\\n| * 9f8e7d6 feat(login): 로그인 폼 추가\n| * 5c4b3a2 feat(login): 세션 저장\n|/\n\n# ② Squash 병합 결과: PR 하나 = 커밋 하나\n* 7e6d5c4 feat(login): 로그인 기능 추가 (#45)\n\n# ③ git rebase develop 후 fast-forward 병합(GitHub의 Rebase and merge): 병합 커밋 없는 일직선 이력\n* 3c2b1a0 feat(login): 세션 저장\n* 2b1a0f9 feat(login): 로그인 폼 추가' },
       children: [
         { id: 'pr', label: 'Pull Request', en: 'PR', src: ['gh-pr'], desc: '병합 전에 변경을 보여주고 리뷰·CI 결과를 받는 요청입니다.',
-          ex: { v: 'PR #45', lang: 'text', code: 'git push -u origin feature/login\n\n# GitHub에서 Pull Request 생성\nbase: develop  ←  compare: feature/login\n제목: feat(login): 로그인 기능 추가\n본문: 로그인 폼과 세션 저장을 추가합니다.\n      Closes #12' } },
+          ex: { v: 'PR #45', lang: 'text', code: 'git push -u origin feature/login\n\n# GitHub에서 Pull Request 생성\nbase: develop  ←  compare: feature/login\n제목: feat(login): 로그인 기능 추가\n본문: 로그인 폼과 세션 저장을 추가합니다.\n      Closes #12\n\n# Closes 같은 키워드는 PR 대상이 저장소 기본 브랜치일 때만 동작\n# develop 이 기본 브랜치가 아니면 #12 는 자동으로 닫히지 않음' } },
         { id: 'noff', label: '--no-ff 병합', en: 'merge commit', src: ['git-merge', 'nvie'], desc: '항상 병합 커밋을 만들어 기능 단위가 이력에 묶여 남습니다.',
           ex: { v: "Merge branch 'feature/login'", lang: 'bash', code: "git switch develop\ngit merge --no-ff feature/login\n# → 새 커밋: Merge branch 'feature/login' into develop" } },
         { id: 'squash', label: 'Squash 병합', en: 'squash merge', src: ['gh-merges', 'git-merge'], desc: 'PR의 여러 커밋을 대상 브랜치에 커밋 하나로 합칩니다.',
@@ -101,8 +101,8 @@ window.GUIDE_DATA = {
           ex: { v: 'add OAuth2 login', lang: 'text', code: '✔ feat(auth): add OAuth2 login      # 명령형, 짧게\n✘ feat(auth): Added OAuth2 login.   # 과거형·마침표\n✘ feat(auth): 수정함                 # 무엇을 바꿨는지 알 수 없음' } },
         { id: 'body', label: 'body', en: 'body', src: ['cc', 'book-contrib'], desc: '제목 다음 빈 줄 뒤에 무엇을 왜 바꿨는지 72자 안팎으로 줄바꿈해 씁니다.',
           ex: { v: 'Google 계정으로 로그인', lang: 'text', code: 'feat(auth): add OAuth2 login\n                               ← 빈 줄 1개 필수\nGoogle 계정으로 로그인할 수 있도록 OAuth2 인증 흐름을 추가합니다.\n기존 이메일 로그인은 그대로 유지합니다.' } },
-        { id: 'footer', label: 'footer', en: 'BREAKING CHANGE · Closes', src: ['cc', 'gh-link'], desc: 'BREAKING CHANGE: 표시나 Closes #123 같은 이슈 연결을 적습니다.',
-          ex: { v: 'Closes #123', lang: 'text', code: 'Closes #123\n\n# 호환이 깨질 때\nBREAKING CHANGE: PaymentResult.amount 타입이 float에서 Decimal로 변경됨\n# 또는 type 뒤에 ! 표시\nfeat(payment)!: 금액 타입을 Decimal로 변경' } },
+        { id: 'footer', label: 'footer', en: 'BREAKING CHANGE · Closes', src: ['cc', 'gh-link'], desc: 'BREAKING CHANGE: 표시나 Closes #123 같은 이슈 연결을 적습니다. 이슈 자동 닫기는 기본 브랜치에 병합될 때만 동작합니다.',
+          ex: { v: 'Closes #123', lang: 'text', code: 'Closes #123\n# 키워드: close(s/d) · fix(es/ed) · resolve(s/d), 기본 브랜치 병합 시 이슈 닫힘\n\n# 호환이 깨질 때\nBREAKING CHANGE: PaymentResult.amount 타입이 float에서 Decimal로 변경됨\n# 또는 type 뒤에 ! 표시\nfeat(payment)!: 금액 타입을 Decimal로 변경' } },
         { id: 'atomic', label: '원자적 커밋', en: 'atomic commit', src: ['book-contrib'], desc: '논리적으로 하나인 변경만 한 커밋에 담아 되돌리기·리뷰가 쉽게 합니다.',
           ex: { v: 'git add -p', lang: 'bash', code: '# ✘ 여러 변경을 한 커밋에\ngit commit -am "로그인 추가, 버그 수정, 포맷 정리"\n\n# ✔ 논리 단위로 나눠 커밋\ngit add -p src/auth/          # 바뀐 부분만 골라 스테이징\ngit commit -m "feat(auth): add OAuth2 login"\ngit add src/payment/round.ts\ngit commit -m "fix(payment): 결제 금액 반올림 오류 수정"' } }
       ]
@@ -127,8 +127,8 @@ window.GUIDE_DATA = {
       desc: '지속 배포하는 서비스는 더 단순한 전략이 맞을 수 있습니다.',
       ex: { lang: 'text', code: 'Git Flow       main · develop · feature · release · hotfix\nGitHub flow    main + 짧은 브랜치 → PR → 병합 후 배포\n환경별 브랜치  main → test → UAT 로 릴리스 후보 승격\nTrunk-Based    trunk 하나에 최소 24시간마다 통합\nFeature Flag   미완성 기능은 꺼 둔 채로 병합' },
       children: [
-        { id: 'githubflow', label: 'GitHub flow', en: 'GitHub flow', src: ['gh-flow'], desc: 'main 하나와 짧은 작업 브랜치, PR 리뷰 후 병합만으로 운영합니다.',
-          ex: { v: 'GitHub flow', lang: 'bash', code: 'git switch -c add-oauth main\ngit commit -m "feat(auth): add OAuth2 login"\ngit push -u origin add-oauth\n# PR 생성 → 리뷰·CI → main에 병합 → 배포' } },
+        { id: 'githubflow', label: 'GitHub flow', en: 'GitHub flow', src: ['gh-flow'], desc: '브랜치 생성 → 변경 → PR → 리뷰 반영 → 병합 → 브랜치 삭제의 6단계로, main 하나와 짧은 브랜치만 씁니다.',
+          ex: { v: 'GitHub flow', lang: 'bash', code: 'git switch -c add-oauth main\ngit commit -m "feat(auth): add OAuth2 login"\ngit push -u origin add-oauth\n# PR 생성 → 리뷰 반영 → main에 병합 → 브랜치 삭제\ngit branch -d add-oauth' } },
         { id: 'gitlabflow', label: '환경별 브랜치', en: 'Branch per environment', src: ['gitlab-strategies'], desc: '기능은 main으로 모으고, 릴리스 후보 커밋을 test·UAT 같은 환경 브랜치로 승격합니다.',
           ex: { v: 'main → test → UAT', lang: 'bash', code: '# 기능은 main에서 갈라져 main으로 병합\ngit switch test && git merge main   # v1.1 RC1 을 test 환경으로\ngit switch UAT  && git merge test   # 검증 통과 후 UAT 환경으로' } },
         { id: 'trunk', label: 'Trunk-Based', en: 'Trunk-Based Development', src: ['tbd'], desc: '모두가 trunk 한 곳에 작은 변경을 최소 하루 한 번 통합합니다.',
@@ -167,11 +167,11 @@ window.GUIDE_DATA = {
       id: 'commitmsg', title: '커밋 메시지 작성 흐름', at: 'message', src: ['cc', 'book-contrib', 'gh-link', 'git-log'],
       desc: 'Conventional Commits 형식으로 한 커밋의 메시지를 채워 가는 순서입니다.',
       steps: [
-        { node: 'type', text: '변경 종류를 고릅니다. 새 기능은 feat, 버그 수정은 fix, 문서는 docs 처럼 11가지 중 하나입니다.' },
+        { node: 'type', text: '변경 종류를 고릅니다. 규약이 정한 것은 feat·fix 둘이고, docs 같은 나머지는 commitlint 설정(11가지) 같은 팀 규칙을 따릅니다.' },
         { node: 'scope', text: '영향 영역을 괄호로 붙입니다. 예: feat(auth)' },
         { node: 'subject', text: '콜론 뒤에 명령형 한 줄 요약을 씁니다. 예: feat(auth): add OAuth2 login' },
         { node: 'body', text: '빈 줄 다음 본문에 무엇을 왜 바꿨는지 적습니다.' },
-        { node: 'footer', text: '마지막에 Closes #123, 호환이 깨지면 BREAKING CHANGE: 를 적습니다.' },
+        { node: 'footer', text: '마지막에 Closes #123, 호환이 깨지면 BREAKING CHANGE: 를 적습니다. Closes는 기본 브랜치에 병합될 때 이슈를 닫습니다.' },
         { node: 'log', text: '이렇게 쓰면 git log --grep "feat(auth)"로 바로 찾을 수 있습니다.' }
       ]
     },
@@ -180,7 +180,7 @@ window.GUIDE_DATA = {
       desc: '다음 버전에 들어갈 기능이 모인 develop을 운영 버전으로 내보내는 순서입니다.',
       steps: [
         { node: 'develop', text: '이번 릴리스에 넣을 기능이 develop에 모두 병합됐습니다.' },
-        { node: 'release', text: 'git switch -c release/1.2.0 develop 으로 릴리스 브랜치를 만들고 버전 번호·버그 수정만 합니다.' },
+        { node: 'release', text: 'git switch -c release/1.2.0 develop 으로 릴리스 브랜치를 만들고, 바로 버전 번호를 올린 뒤 버그 수정만 합니다.' },
         { node: 'main', text: 'release를 main에 --no-ff로 병합하고, 같은 내용을 develop에도 병합합니다.' },
         { node: 'tag', text: 'git tag -a v1.2.0 후 git push origin main develop --tags 로 올립니다.' }
       ]
@@ -192,7 +192,7 @@ window.GUIDE_DATA = {
         { node: 'main', text: '운영(main, v1.2.0)에서 급한 버그가 발견됩니다.' },
         { node: 'hotfix', text: 'git switch -c hotfix/1.2.1 main 으로 갈라 수정하고 fix: 커밋을 남깁니다.' },
         { node: 'tag', text: 'main에 병합하고 PATCH만 올려 v1.2.1 Tag를 붙입니다.' },
-        { node: 'develop', text: '같은 수정을 develop에도 병합해 다음 릴리스에서 버그가 되살아나지 않게 합니다.' }
+        { node: 'develop', text: '같은 수정을 develop에도 병합해 다음 릴리스에서 버그가 되살아나지 않게 합니다. 진행 중인 release 브랜치가 있으면 develop 대신 그 release에 병합합니다.' }
       ]
     },
     {
@@ -230,7 +230,7 @@ window.GUIDE_DATA = {
   ],
 
   terms: [
-    { term: 'Git Flow', summary: 'main·develop 두 장기 브랜치와 feature·release·hotfix 보조 브랜치로 나누는 전략', vs: { term: 'GitHub flow', diff: 'Git Flow는 릴리스 단위로 관리하고, GitHub flow는 main 하나에서 PR마다 바로 배포' }, src: ['nvie', 'gh-flow'], nodes: ['branches'] },
+    { term: 'Git Flow', summary: 'main·develop 두 장기 브랜치와 feature·release·hotfix 보조 브랜치로 나누는 전략', vs: { term: 'GitHub flow', diff: 'Git Flow는 develop·release로 릴리스 단위를 관리하고, GitHub flow는 짧은 브랜치를 PR로 main에 바로 병합' }, src: ['nvie', 'gh-flow'], nodes: ['branches'] },
     { term: 'main', summary: '운영에 배포된 버전만 담는 브랜치', vs: { term: 'develop', diff: 'main은 배포된 결과이고, develop은 다음 릴리스를 모으는 중인 상태' }, src: ['nvie'], nodes: ['main'] },
     { term: 'feature 브랜치', summary: 'develop에서 갈라져 기능 하나를 만드는 단기 브랜치', vs: { term: 'hotfix 브랜치', diff: 'feature는 develop에서 시작하고, hotfix는 운영 버그 때문에 main에서 시작' }, src: ['nvie'], nodes: ['feature'] },
     { term: 'release 브랜치', summary: '버전 확정과 막바지 수정만 하는 브랜치', vs: { term: 'develop', diff: 'release에는 새 기능을 넣지 않고, develop은 계속 다음 기능을 받음' }, src: ['nvie'], nodes: ['release'] },
@@ -245,7 +245,7 @@ window.GUIDE_DATA = {
     { term: 'feat', summary: '새 기능을 추가하는 커밋 type(SemVer MINOR)', vs: { term: 'fix', diff: 'feat는 기능 추가로 MINOR, fix는 버그 수정으로 PATCH에 대응' }, src: ['cc', 'semver'], nodes: ['t-feat', 't-fix'] },
     { term: 'refactor', summary: '동작은 그대로 두고 코드 구조만 바꾸는 type', vs: { term: 'style', diff: 'refactor는 코드 구조를 바꾸고, style은 공백·포맷 등 의미 없는 변경만' }, src: ['commitlint'], nodes: ['t-refactor', 't-style'] },
     { term: 'BREAKING CHANGE', summary: '호환이 깨지는 변경을 알리는 footer(또는 type 뒤 !)', vs: { term: 'feat', diff: 'feat는 MINOR만 올리고, BREAKING CHANGE가 붙으면 type과 상관없이 MAJOR를 올림' }, src: ['cc', 'semver'], nodes: ['footer'] },
-    { term: 'Closes #123', summary: 'PR이 병합되면 해당 이슈를 자동으로 닫는 키워드', vs: { term: '#123 단순 언급', diff: 'Closes 키워드는 병합 시 이슈를 닫고, 키워드 없는 #123은 링크만 걸림' }, src: ['gh-link'], nodes: ['footer'] },
+    { term: 'Closes #123', summary: 'PR이 기본 브랜치에 병합되면 해당 이슈를 자동으로 닫는 키워드', vs: { term: '#123 단순 언급', diff: 'Closes 키워드는 기본 브랜치 병합 시 이슈를 닫고(다른 브랜치 대상 PR에서는 무시), 키워드 없는 #123은 링크만 걸림' }, src: ['gh-link'], nodes: ['footer'] },
     { term: 'Feature Flag', summary: '미완성 기능을 설정값으로 꺼 둔 채 코드를 병합하는 기법', vs: { term: '장기 feature 브랜치', diff: 'Feature Flag는 코드를 trunk에 일찍 합치고 노출만 막으며, 장기 브랜치는 완성될 때까지 코드를 따로 둠' }, src: ['tbd-flags'], nodes: ['featureflag'] },
     { term: 'Trunk-Based Development', summary: '모두가 trunk 하나에 작은 변경을 자주 합치는 방식', vs: { term: 'Git Flow', diff: 'Trunk-Based는 장기 브랜치 없이 통합을 자주 하고, Git Flow는 develop·release 같은 장기 브랜치를 유지' }, src: ['tbd', 'nvie'], nodes: ['trunk'] }
   ]
