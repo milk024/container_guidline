@@ -31,6 +31,7 @@
   color-scheme: dark;
   --gut: 24px; /* 화면 가장자리 여백: 헤더·흐름 패널·실습 창이 모두 이 선에 맞춘다 */
 }
+:root { --tw: 328px; }
 @media (max-width: 899px) { :root { --gut: 16px; } }
 
 * { box-sizing: border-box; }
@@ -126,7 +127,7 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .leaders { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 
 @media (min-width: 900px) {
-  .layout { height: calc(100vh - 64px); padding-right: calc(328px + var(--gut) * 2); }
+  .layout { height: calc(100vh - 64px); padding-right: calc(var(--tw) + var(--gut) * 2); }
   .hw-stage { height: 100%; justify-content: center; justify-content: safe center; }
   /* 실습 창은 장면을 가리지 않게 제 자리를 따로 갖는다.
      넓은 화면: 펼치면 왼쪽 칸 / 좁은 데스크톱: 펼치면 아래 칸 / 접으면 어느 쪽이든 아래 줄 */
@@ -137,13 +138,13 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
   html.pr-on:not(.pr-folded) .pr-body { flex: 1; min-height: 0; max-height: none; }
 }
 @media (min-width: 1400px) {
-  :root { --prw: clamp(300px, 24vw, 400px); }
+  :root { --prw: clamp(300px, 22vw, 440px); --tw: clamp(328px, 20vw, 440px); }
   html.pr-on:not(.pr-folded) .practice { top: 80px; width: var(--prw); }
   html.pr-on:not(.pr-folded) .layout { padding-left: calc(var(--prw) + var(--gut) * 2); }
 }
 @media (min-width: 900px) and (max-width: 1399px) {
   /* 세 칸을 나란히 두기엔 좁다: 실습 창은 장면 아래 문서 흐름에 둔다(스크롤해서 본다) */
-  html.pr-on .practice, html.pr-on.pr-folded .practice { position: relative; left: auto; bottom: auto; top: auto; width: auto; height: auto; margin: 0 calc(328px + var(--gut) * 2) var(--gut) var(--gut); }
+  html.pr-on .practice, html.pr-on.pr-folded .practice { position: relative; left: auto; bottom: auto; top: auto; width: auto; height: auto; margin: 0 calc(var(--tw) + var(--gut) * 2) var(--gut) var(--gut); }
   html.pr-on.pr-folded .layout { padding-bottom: 0; }
 }
 @media (min-width: 900px) and (max-width: 1100px) {
@@ -254,7 +255,7 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 }
 @media (min-width: 900px) {
   .tours {
-    position: fixed; top: 80px; right: var(--gut); bottom: var(--gut); width: 328px; margin: 0;
+    position: fixed; top: 80px; right: var(--gut); bottom: var(--gut); width: var(--tw); margin: 0;
     padding: 4px 0 4px var(--gut); border-top: 0; border-left: 1px solid var(--line);
     overflow-y: auto; overflow-x: hidden; scrollbar-width: thin;
   }
@@ -265,8 +266,7 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
   }
 }
 @media (min-width: 900px) and (max-width: 1100px) {
-  .layout { padding-right: calc(272px + var(--gut) * 2); }
-  .tours { width: 272px; }
+  :root { --tw: 272px; }
 }
 @keyframes scan { 0% { top: 0; opacity: 0; } 20% { opacity: 1; } 100% { top: calc(100% - 80px); opacity: 0; } }
 
