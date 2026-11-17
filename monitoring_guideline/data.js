@@ -10,7 +10,7 @@ window.GUIDE_DATA = {
     eyebrow: '관측·알림',
     title: 'Monitoring 한눈에 보기',
     subtitle: '수집 대상 → 수집 → 저장 → 시각화 → 알림 순서로 메트릭과 로그가 이동하는 과정을 따라갑니다.',
-    checked: '2026-11-09',
+    checked: '2026-11-17',
     keyPoint: '서비스 상태를 계속 지켜보다가 이상하면 알려주는 경보 시스템',
     learn: ['숫자(메트릭)와 기록(로그)이 수집 대상 → 수집 → 저장 → 시각화 → 알림으로 이동하는 5단계', 'Prometheus·Loki·Grafana·Alertmanager가 각각 무엇을 받아서 무엇을 넘기는지', '필요할 때만 더 깊이: 메트릭 유형, 자동 발견, 장기 보관, 알림 묶기·끄기']
   },
@@ -37,6 +37,7 @@ window.GUIDE_DATA = {
     { id: 'k8s-logging', title: 'Kubernetes Docs — Logging Architecture', url: 'https://kubernetes.io/docs/concepts/cluster-administration/logging/', use: '컨테이너 로그 위치' },
     { id: 'dcgm', title: 'NVIDIA Docs — DCGM Exporter', url: 'https://docs.nvidia.com/datacenter/cloud-native/gpu-telemetry/latest/dcgm-exporter.html', use: 'GPU 메트릭' },
     { id: 'fluentbit', title: 'Fluent Bit Docs — Manual', url: 'https://docs.fluentbit.io/manual', use: 'Fluent Bit' },
+    { id: 'fb-classic', title: 'Fluent Bit Docs — Classic mode', url: 'https://docs.fluentbit.io/manual/administration/configuring-fluent-bit/classic-mode', use: 'classic 형식 2026년 말 deprecated 예정' },
     { id: 'loki', title: 'Grafana Loki Docs — Overview', url: 'https://grafana.com/docs/loki/latest/get-started/overview/', use: 'Loki 라벨 인덱싱' },
     { id: 'logql', title: 'Grafana Loki Docs — LogQL', url: 'https://grafana.com/docs/loki/latest/query/', use: 'LogQL' },
     { id: 'grafana', title: 'Grafana Docs — Dashboards', url: 'https://grafana.com/docs/grafana/latest/visualizations/dashboards/', use: 'Dashboard' },
@@ -137,7 +138,7 @@ window.GUIDE_DATA = {
               key: '값을 구간(bucket)별 개수로 세어 내보낸다. 서버에서 histogram_quantile로 분위수(예: 상위 10%)를 계산한다.',
               role: '관측값(예: 응답 시간)을 받아서 bucket별 개수·_sum·_count로 넘긴다',
               desc: '관측값을 구간(bucket)별 누적 개수와 _sum·_count로 내보내며, 서버에서 histogram_quantile로 분위수를 계산합니다.',
-              ex: { v: 'histogram', lang: 'promql', code: '_bucket{le="0.1"}  0.1초 이하로 끝난 요청 수 (누적)\n_sum / _count      전체 합계 / 전체 개수\nhistogram_quantile(0.9, rate(http_request_duration_seconds_bucket[10m]))' }
+              ex: { v: 'histogram', lang: 'promql', code: '_bucket{le="0.1"}  0.1초 이하로 끝난 요청 수 (누적)\n_sum / _count      전체 합계 / 전체 개수\nhistogram_quantile(0.9, rate(http_request_duration_seconds_bucket[10m]))\n# 참고: native histogram은 bucket을 하나의 복합 샘플로 저장해 classic보다 효율적이며,\n# 공식 문서는 라이브러리가 지원하면(현재 Go·Java) native를 우선 권장' }
             },
             {
               id: 'summary', label: 'Summary', en: 'Summary', src: ['prom-types'],
@@ -204,11 +205,11 @@ window.GUIDE_DATA = {
           ]
         },
         {
-          id: 'fluentbit', label: 'Fluent Bit', en: 'Log collector', src: ['fluentbit', 'k8s-logging'],
+          id: 'fluentbit', label: 'Fluent Bit', en: 'Log collector', src: ['fluentbit', 'k8s-logging', 'fb-classic'],
           key: '각 Node에 하나씩(DaemonSet) 떠서 로그 파일을 읽고(Input), 정보를 붙이고(Filter), 보낸다(Output).',
           role: '컨테이너 로그 파일을 받아서 Pod 정보를 붙인 레코드로 Loki에게 넘긴다',
           desc: '각 Node에 DaemonSet으로 떠서 컨테이너 로그 파일을 읽고(Input) 라벨을 붙여(Filter) 전송(Output)합니다.',
-          ex: { v: 'Fluent Bit', lang: 'text', code: '# Fluent Bit 설정 (classic 형식)\n[INPUT]\n    Name   tail\n    Path   /var/log/containers/*.log\n    Tag    kube.*\n[FILTER]\n    Name       kubernetes\n    Match      kube.*\n    Merge_Log  On\n[OUTPUT]\n    Name   loki\n    Match  *\n    Host   loki.monitoring.svc\n    Labels job=fluentbit\n    auto_kubernetes_labels on' },
+          ex: { v: 'Fluent Bit', lang: 'text', code: '# Fluent Bit 설정 (classic 형식)\n# 주의: classic 형식은 2026년 말 deprecated 예정이며 YAML 형식이 기능을 더 지원함\n[INPUT]\n    Name   tail\n    Path   /var/log/containers/*.log\n    Tag    kube.*\n[FILTER]\n    Name       kubernetes\n    Match      kube.*\n    Merge_Log  On\n[OUTPUT]\n    Name   loki\n    Match  *\n    Host   loki.monitoring.svc\n    Labels job=fluentbit\n    auto_kubernetes_labels on' },
           children: [
             {
               id: 'fbtail', label: 'Input: tail', en: 'tail input', src: ['fb-tail'],
