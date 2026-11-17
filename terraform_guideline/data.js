@@ -9,7 +9,7 @@ window.GUIDE_DATA = {
     eyebrow: '인프라를 코드로',
     title: 'Terraform 한눈에 보기',
     subtitle: '원하는 인프라를 .tf 파일에 적고, plan으로 바뀔 내용을 확인한 뒤, apply로 만들고 State에 기록하는 흐름을 한 단계씩 살펴봅니다.',
-    checked: '2026-11-11',
+    checked: '2026-11-17',
     keyPoint: '서버·네트워크 같은 인프라를 코드 파일로 적어 두면, Terraform이 지금 상태와 비교해 필요한 만큼만 만들고 바꾸고 지우는 도구',
     learn: ['코드 작성 → init → plan → apply로 이어지는 기본 흐름', 'Provider·State·Module이 각각 무엇을 받아서 무엇을 넘기는지', '필요할 때만 한 단계씩 더 깊이: 변수 우선순위·State 잠금·반복 생성 같은 세부 기능']
   },
@@ -48,6 +48,8 @@ window.GUIDE_DATA = {
     { id: 's3', title: 'Terraform — Backend type: s3', url: 'https://developer.hashicorp.com/terraform/language/backend/s3', use: 'bucket·key·region, use_lockfile, DynamoDB 잠금 deprecated, 버킷 버전 관리' },
     { id: 'locking', title: 'Terraform — State locking', url: 'https://developer.hashicorp.com/terraform/language/state/locking', use: '쓰기 작업 자동 잠금, -lock=false 비권장, force-unlock' },
     { id: 'workspaces', title: 'Terraform CLI — Workspaces', url: 'https://developer.hashicorp.com/terraform/cli/workspaces', use: '한 디렉터리의 여러 State, default, 같은 Backend 공유' },
+    { id: 'staterm', title: 'Terraform CLI — terraform state rm', url: 'https://developer.hashicorp.com/terraform/cli/commands/state/rm', use: 'removed 블록으로 대체 가능' },
+    { id: 'removed', title: 'Terraform Docs — removed block', url: 'https://developer.hashicorp.com/terraform/language/block/removed', use: 'removed 블록(destroy = false)' },
     { id: 'statecmd', title: 'Terraform CLI — terraform state', url: 'https://developer.hashicorp.com/terraform/cli/commands/state', use: 'list·show·mv·rm 등, State 파일 직접 수정 대신 명령 사용' },
     { id: 'sensitive', title: 'Terraform — Manage sensitive data', url: 'https://developer.hashicorp.com/terraform/language/manage-sensitive-data', use: 'State는 평문, sensitive는 출력만 가림, 암호화·원격 저장, ephemeral' },
     { id: 'modules', title: 'Terraform — Modules', url: 'https://developer.hashicorp.com/terraform/language/modules', use: 'Module 정의, Root·Child Module, 공개·사설 레지스트리' },
@@ -254,11 +256,11 @@ window.GUIDE_DATA = {
       ex: { v: 'terraform.tfstate', lang: 'text', code: '코드                         State                      실제\nresource "aws_instance"  →  aws_instance.web         →  i-0123456789abcdef0\n         "web"               id = "i-0123..."\n\n# 기본: ./terraform.tfstate (+ terraform.tfstate.backup)\n# 팀:   S3·HCP Terraform 같은 원격 Backend 권장' },
       children: [
         {
-          id: 'tfstate', label: 'State 파일', en: 'state file', src: ['state', 'statecmd'],
+          id: 'tfstate', label: 'State 파일', en: 'state file', src: ['state', 'statecmd', 'staterm', 'removed'],
           key: '코드의 Resource 주소와 실제 리소스 ID를 짝지어 둔 JSON 파일. 손으로 고치지 않는다.',
           role: 'apply 결과를 받아서 plan·output·destroy에게 현재 상태로 넘긴다',
           desc: '기본으로 작업 공간마다 terraform.tfstate에 저장되며, 직접 고치는 대신 terraform state 명령으로 다룹니다.',
-          ex: { v: 'terraform state list', lang: 'bash', code: 'terraform state list                    # 관리 중인 주소 목록\nterraform state show aws_instance.web   # 한 객체의 속성\nterraform state mv  aws_instance.web aws_instance.app   # 주소 변경\nterraform state rm  aws_instance.old    # 관리 대상에서만 제외(실제 삭제 아님)' }
+          ex: { v: 'terraform state list', lang: 'bash', code: 'terraform state list                    # 관리 중인 주소 목록\nterraform state show aws_instance.web   # 한 객체의 속성\nterraform state mv  aws_instance.web aws_instance.app   # 주소 변경\nterraform state rm  aws_instance.old    # 관리 대상에서만 제외(실제 삭제 아님)\n\n# state rm 대신 코드로 남기는 방법: removed 블록\nremoved {\n  from = aws_instance.old\n  lifecycle { destroy = false }   # 실제 리소스는 지우지 않음\n}' }
         },
         {
           id: 'backend', label: 'Backend', en: 'remote backend', src: ['backend', 's3', 'remote'],
