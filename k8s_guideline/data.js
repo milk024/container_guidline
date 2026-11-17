@@ -10,7 +10,7 @@ window.GUIDE_DATA = {
     eyebrow: '컨테이너 오케스트레이션',
     title: 'Kubernetes 한눈에 보기',
     subtitle: 'kubectl로 원하는 상태를 제출하면 Control Plane이 기록하고, 워크로드가 Pod 개수를 지키며, Worker Node가 실행하고, Service가 연결합니다.',
-    checked: '2026-11-09',
+    checked: '2026-11-17',
     keyPoint: '수많은 컨테이너를 알아서 배치하고, 죽으면 다시 살려주는 관리자',
     learn: ['"이렇게 돌아가게 해 줘"라고 적어 내면 Kubernetes가 그 상태를 계속 지켜 주는 5단계 기본 흐름', '관리하는 쪽(Control Plane)과 실제 실행하는 쪽(Worker Node)이 각각 무엇을 받아서 넘기는지', '필요할 때만 한 단계씩 더 깊이: 배치 규칙·네트워크·저장소·권한']
   },
@@ -39,6 +39,7 @@ window.GUIDE_DATA = {
     { id: 'service', title: 'Kubernetes Docs — Service', url: 'https://kubernetes.io/docs/concepts/services-networking/service/', use: 'Service' },
     { id: 'gateway', title: 'Kubernetes Docs — Gateway API', url: 'https://kubernetes.io/docs/concepts/services-networking/gateway/', use: 'Gateway API' },
     { id: 'ingress', title: 'Kubernetes Docs — Ingress', url: 'https://kubernetes.io/docs/concepts/services-networking/ingress/', use: 'Ingress' },
+    { id: 'ingnginx', title: 'Kubernetes Blog — Ingress NGINX Retirement', url: 'https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/', use: 'Ingress NGINX 2026년 3월 유지보수 종료' },
     { id: 'dns', title: 'Kubernetes Docs — DNS for Services and Pods', url: 'https://kubernetes.io/docs/concepts/services-networking/dns-pod-service/', use: 'CoreDNS' },
     { id: 'netpol', title: 'Kubernetes Docs — Network Policies', url: 'https://kubernetes.io/docs/concepts/services-networking/network-policies/', use: 'NetworkPolicy' },
     { id: 'cni', title: 'Kubernetes Docs — Network Plugins', url: 'https://kubernetes.io/docs/concepts/extend-kubernetes/compute-storage-net/network-plugins/', use: 'CNI' },
@@ -194,7 +195,7 @@ window.GUIDE_DATA = {
           key: '모든(또는 조건에 맞는) Node마다 Pod를 하나씩 띄운다. 로그 수집·모니터링 에이전트에 쓴다.',
           role: 'Node 목록을 받아서 Node마다 하나씩 Pod 생성 요청으로 넘긴다',
           desc: '모든(또는 조건에 맞는) Node마다 Pod를 하나씩 실행하며, 로그 수집·모니터링 에이전트에 씁니다.',
-          ex: { v: 'daemonset.apps/log-agent', lang: 'yaml', code: 'apiVersion: apps/v1\nkind: DaemonSet\nmetadata: { name: log-agent, namespace: kube-system }\nspec:\n  selector: { matchLabels: { app: log-agent } }\n  template:\n    metadata: { labels: { app: log-agent } }\n    spec:\n      tolerations:   # Control Plane Node에도 배치\n      - { key: node-role.kubernetes.io/control-plane, effect: NoSchedule }\n      containers:\n      - { name: agent, image: fluent/fluent-bit }' }
+          ex: { v: 'daemonset.apps/log-agent', lang: 'yaml', code: 'apiVersion: apps/v1\nkind: DaemonSet\nmetadata: { name: log-agent, namespace: kube-system }\nspec:\n  selector: { matchLabels: { app: log-agent } }\n  template:\n    metadata: { labels: { app: log-agent } }\n    spec:\n      tolerations:   # Control Plane Node에도 배치\n      - { key: node-role.kubernetes.io/control-plane, operator: Exists, effect: NoSchedule }\n      containers:\n      - { name: agent, image: fluent/fluent-bit }' }
         },
         {
           id: 'job', label: 'Job · CronJob', en: 'Job / CronJob', src: ['job', 'cronjob'],
@@ -264,11 +265,11 @@ window.GUIDE_DATA = {
               ex: { v: 'image: shop-web:1.4.0', lang: 'bash', code: '$ kubectl exec -it web -n shop -c web -- ps   # 출력은 요약한 예\nPID   USER   COMMAND\n  1   app    node server.js' }
             },
             {
-              id: 'probe', label: 'Probe', en: 'Liveness / Readiness', src: ['probes'],
-              key: 'kubelet이 컨테이너가 살아 있는지(Liveness), 요청을 받을 준비가 됐는지(Readiness) 주기적으로 검사한다.',
+              id: 'probe', label: 'Probe', en: 'Liveness / Readiness / Startup', src: ['probes'],
+              key: 'kubelet이 컨테이너가 살아 있는지(Liveness), 요청을 받을 준비가 됐는지(Readiness) 주기적으로 검사한다. Startup probe를 두면 그것이 성공할 때까지 나머지 두 Probe는 실행되지 않는다.',
               role: 'Container의 응답을 받아서 kubelet에게 재시작 또는 트래픽 제외 판단으로 넘긴다',
               desc: 'kubelet이 컨테이너가 살아 있는지, 요청을 받을 준비가 됐는지 주기적으로 검사하는 방법입니다.',
-              ex: { v: 'readinessProbe', lang: 'yaml', code: 'livenessProbe:\n  httpGet: { path: /healthz, port: 8080 }\n  periodSeconds: 10\n  failureThreshold: 3   # 연속 3번 실패 → 컨테이너 재시작\nreadinessProbe:\n  httpGet: { path: /ready, port: 8080 }\n  periodSeconds: 5      # 실패하는 동안 Service 대상에서 제외' }
+              ex: { v: 'readinessProbe', lang: 'yaml', code: 'startupProbe:            # 느리게 뜨는 앱: 성공 전까지 liveness·readiness 보류\n  httpGet: { path: /healthz, port: 8080 }\n  periodSeconds: 10\n  failureThreshold: 30  # 최대 약 300초 기다림, 실패 시 재시작\nlivenessProbe:\n  httpGet: { path: /healthz, port: 8080 }\n  periodSeconds: 10     # 기본값 10초\n  failureThreshold: 3   # 기본값 3, 연속 3번 실패 → 컨테이너 재시작\nreadinessProbe:\n  httpGet: { path: /ready, port: 8080 }\n  periodSeconds: 5      # 실패하는 동안 Service 대상에서 제외' }
             },
             {
               id: 'resources', label: 'requests / limits', en: 'Resources', src: ['resources'],
@@ -346,11 +347,11 @@ window.GUIDE_DATA = {
               ex: { v: 'LoadBalancer', lang: 'yaml', code: 'spec:\n  type: LoadBalancer\n  selector: { app: web }\n  ports: [{ port: 80, targetPort: 8080 }]\n# 구현체가 IP를 할당하면 EXTERNAL-IP에 표시되고,\n# 구현체가 없으면 계속 <pending>' }
             },
             {
-              id: 'ingress', label: 'Ingress', en: 'Ingress', src: ['ingress'],
-              key: 'host·path 규칙으로 HTTP 요청을 Service에 보내는 객체. 기능 추가가 멈춰 공식 문서는 Gateway API를 권장한다.',
+              id: 'ingress', label: 'Ingress', en: 'Ingress', src: ['ingress', 'ingnginx'],
+              key: 'host·path 규칙으로 HTTP 요청을 Service에 보내는 객체. 기능 추가가 멈춰 공식 문서는 Gateway API를 권장한다(API 자체는 GA라 제거 계획은 없음). 대표 구현체 Ingress NGINX는 2026년 3월 유지보수가 끝나 이후 보안 패치가 없다.',
               role: '바깥의 HTTP 요청을 Ingress controller가 받아서 규칙에 맞는 Service에게 넘긴다',
               desc: 'host·path 규칙으로 HTTP 요청을 Service에 보내는 객체로, API가 동결돼 공식 문서는 Gateway API를 권장합니다.',
-              ex: { v: 'ingressClassName: nginx', lang: 'yaml', code: 'apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata: { name: web, namespace: shop }\nspec:\n  ingressClassName: nginx\n  rules:\n  - host: shop.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend: { service: { name: web, port: { number: 80 } } }' }
+              ex: { v: 'ingressClassName: nginx', lang: 'yaml', code: 'apiVersion: networking.k8s.io/v1\nkind: Ingress\nmetadata: { name: web, namespace: shop }\nspec:\n  ingressClassName: nginx\n  rules:\n  - host: shop.example.com\n    http:\n      paths:\n      - path: /\n        pathType: Prefix\n        backend: { service: { name: web, port: { number: 80 } } }\n# 주의: Ingress NGINX는 2026년 3월로 유지보수 종료(기존 배포는 동작하나 보안 패치 없음)\n# → Gateway API로 이전하거나 다른 Ingress controller 사용' }
             },
             {
               id: 'gateway', label: 'Gateway API', en: 'Gateway / HTTPRoute', src: ['gateway'],
@@ -620,7 +621,7 @@ window.GUIDE_DATA = {
     { term: 'Taint', summary: 'Node에 붙여 일반 Pod가 오지 못하게 밀어내는 표시', vs: { term: 'Toleration', diff: 'Taint는 Node에 거는 제한이고, Toleration은 Pod가 그 제한을 견딜 수 있다는 허용 표시' }, src: ['taint'], nodes: ['taint'] },
     { term: 'nodeSelector', summary: 'Node label로 Pod가 갈 Node를 지정하는 조건', vs: { term: 'Taint', diff: 'nodeSelector는 Pod가 Node를 고르는 것이고, Taint는 Node가 Pod를 거절하는 것' }, src: ['affinity', 'taint'], nodes: ['affinity'] },
     { term: 'requests', summary: '스케줄링 시 보장받는 최소 CPU·메모리', vs: { term: 'limits', diff: 'requests는 배치 기준이 되는 보장량이고, limits는 넘으면 CPU 제한·메모리 OOM 종료되는 상한' }, src: ['resources'], nodes: ['resources'] },
-    { term: 'Liveness probe', summary: '컨테이너가 살아 있는지 검사하고 실패 시 재시작', vs: { term: 'Readiness probe', diff: 'Liveness 실패는 재시작을, Readiness 실패는 Service 트래픽 대상에서 제외를 일으킴' }, src: ['probes'], nodes: ['probe'] },
+    { term: 'Liveness probe', summary: '컨테이너가 살아 있는지 검사하고 실패 시 재시작', vs: { term: 'Readiness probe', diff: 'Liveness 실패는 재시작을, Readiness 실패는 Service 트래픽 대상에서 제외를 일으킴. Startup probe가 있으면 성공 전까지 둘 다 실행되지 않음' }, src: ['probes'], nodes: ['probe'] },
     { term: 'kubelet', summary: 'Node에서 Pod 실행을 책임지는 에이전트', vs: { term: 'kube-proxy', diff: 'kubelet은 컨테이너 실행·상태를, kube-proxy는 Service 트래픽 전달 규칙을 담당' }, src: ['components'], nodes: ['kubelet'] },
     { term: 'kube-apiserver', summary: '클러스터의 모든 요청을 받는 API 서버', vs: { term: 'etcd', diff: 'API Server는 요청을 검증·처리하는 입구이고, etcd는 그 결과 상태를 저장하는 데이터베이스' }, src: ['components', 'etcd'], nodes: ['apiserver'] },
     { term: 'Control Plane', summary: '클러스터 상태를 저장·결정·조정하는 관리 영역', vs: { term: 'Worker Node', diff: 'Control Plane은 무엇을 어디서 실행할지 결정하고, Worker Node는 실제로 Pod를 실행' }, src: ['components'], nodes: ['cp'] },
