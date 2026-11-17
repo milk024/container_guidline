@@ -812,6 +812,11 @@
     var trail = svg('g', { class: 'tour-trail' });
     trail.appendChild(svg('path', { class: 'journey__path', d: '' }));
     trail.appendChild(svg('circle', { class: 'journey__dot', r: 5, cx: -20, cy: -20 }));
+    // 단계 노드가 장면에 따로 그려지지 않아 상위 요소를 비출 때, 그 위에 단계 이름표를 단다
+    var tag = svg('g', { class: 'tour-tag', 'aria-hidden': 'true', style: 'display:none' });
+    tag.appendChild(svg('rect', { rx: 4 }));
+    tag.appendChild(svg('text', {}));
+    trail.appendChild(tag);
     board.appendChild(trail);
     state.kit = K;
     // 라벨이 빠진 부분은 자동으로 붙인다
@@ -1438,7 +1443,7 @@
     var trail = board.querySelector('.tour-trail');
     var f = state.flows[state.flow];
     board.classList.toggle('touring', !!f);
-    if (!f) { if (trail) { trail.querySelector('path').setAttribute('d', ''); trail.querySelector('circle').setAttribute('cx', -20); } return; }
+    if (!f) { if (trail) { trail.querySelector('path').setAttribute('d', ''); trail.querySelector('circle').setAttribute('cx', -20); stepTag(trail, null); } return; }
     var s = f.steps[state.step], cur = drawnFor(s.node);
     var K = state.kit;
     Object.keys(K.parts).forEach(function (id) { K.parts[id].classList.add('is-dim'); });
@@ -1449,9 +1454,38 @@
       if (part && part.classList) { part.classList.remove('is-dim'); var pid = part.getAttribute('data-id'); each('#labels [data-id="' + pid + '"], #legend [data-id="' + pid + '"]', function (n) { n.classList.add('is-on'); }); }
     }
     var to = cur && centerOf(cur);
+    stepTag(trail, cur && to && (cur.getAttribute('data-sub') || cur.getAttribute('data-id')) !== s.node ? { id: s.node, at: to, el: cur } : null);
     var prevEl = fromStep !== null && fromStep !== undefined && f.steps[fromStep] ? drawnFor(f.steps[fromStep].node) : null;
     var from = prevEl && prevEl !== cur ? centerOf(prevEl) : null;
     travel(trail, from, to);
+  }
+
+  // 상위 요소로 대신 비춘 단계: 비춘 요소 바로 위에 '› 단계 이름'을 띄워 흐름 패널과 장면을 맞춘다
+  function stepTag(trail, o) {
+    var tag = trail && trail.querySelector('.tour-tag');
+    if (!tag) return;
+    tag.classList.remove('is-in');
+    if (!o) { tag.style.display = 'none'; return; }
+    var wrap = $('board-wrap'), k = state.vb[0] / Math.max(1, wrap.clientWidth);
+    var fs = 12 * k, padX = 7 * k, h = fs + 9 * k;
+    var text = tag.querySelector('text'), rect = tag.querySelector('rect');
+    tag.style.display = '';
+    text.textContent = '\u203A ' + nd(o.id).label;
+    text.setAttribute('font-size', fs.toFixed(2));
+    var w = 0;
+    try { w = text.getComputedTextLength(); } catch (e) { w = 0; }
+    if (!w) w = text.textContent.length * fs * 0.62;
+    var top = o.at[1];
+    try { top = o.el.getBBox().y; } catch (e) { /* 중심 기준 */ }
+    var x = o.at[0] - w / 2 - padX, y = top - h - 8 * k;
+    if (y < 2 * k) y = 2 * k;
+    x = Math.max(2 * k, Math.min(state.vb[0] - w - padX * 2 - 2 * k, x));
+    rect.setAttribute('x', x.toFixed(1)); rect.setAttribute('y', y.toFixed(1));
+    rect.setAttribute('width', (w + padX * 2).toFixed(1)); rect.setAttribute('height', h.toFixed(1));
+    rect.setAttribute('rx', (4 * k).toFixed(1));
+    text.setAttribute('x', (x + padX).toFixed(1)); text.setAttribute('y', (y + h / 2).toFixed(1));
+    void tag.getBoundingClientRect();
+    tag.classList.add('is-in');
   }
 
   // 이전 단계 → 지금 단계: 등각 축을 따라 꺾이는 길을 빛나는 점이 지나간다.

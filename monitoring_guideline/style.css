@@ -202,6 +202,11 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 .journey__dot { fill: #fff; filter: drop-shadow(0 0 8px #fff) drop-shadow(0 0 16px var(--lav)); }
 .board:not(.touring) .journey__dot { opacity: 0; }
 .tour-trail { pointer-events: none; }
+.tour-tag rect { fill: rgba(8, 8, 12, .92); stroke: var(--lav-hi); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.tour-tag text { fill: #fff; font-weight: 700; dominant-baseline: central; }
+.tour-tag.is-in { animation: tagIn .32s ease-out; }
+@keyframes tagIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .tour-tag.is-in { animation: none; } }
 
 /* ---------------- 라벨 ---------------- */
 .lbl {
