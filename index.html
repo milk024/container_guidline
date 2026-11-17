@@ -182,7 +182,7 @@
       var narrow = !!(NARROW && NARROW.matches), L = [];
       G.forEach(function (g, i) {
         if (narrow) L.push({ cx: i % 2 ? 252 : 148, cy: 118 + i * 168, a: 40, th: 12, side: i % 2 ? 'left' : 'right' });
-        else L.push({ cx: 128 + i * 189, cy: i % 2 ? 330 : 238, a: 46, th: 14, gy: 448, side: i % 2 ? 'below' : 'above' });
+        else L.push({ cx: 128 + i * 189, cy: i % 2 ? 330 : 238, a: 46, th: 14, gy: (i % 2 ? 330 : 238) + 150, side: i % 2 ? 'below' : 'above' });
       });
       return { narrow: narrow, w: narrow ? 400 : 1200, h: narrow ? 1100 : 640, L: L };
     }
