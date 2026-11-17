@@ -10,7 +10,7 @@ window.GUIDE_DATA = {
     eyebrow: '지속적 통합·배포',
     title: 'CI/CD 한눈에 보기',
     subtitle: '코드를 올리면 빌드·검사·보관·배포가 자동으로 이어지는 5단계를 따라갑니다.',
-    checked: '2026-11-09',
+    checked: '2026-11-17',
     keyPoint: '코드를 올리면 검사부터 배포까지 자동으로 처리하는 컨베이어 벨트',
     learn: ['git push 한 번이 서비스 반영까지 이어지는 5단계(Source → Build → Test → Package → Deploy)', '각 단계가 앞 단계에게 무엇을 받아서 다음 단계에게 무엇을 넘기는지', '필요할 때만 더 깊이: Gitea Actions·Jenkins, Harbor, Helm, Argo CD 세부 설정']
   },
@@ -60,6 +60,9 @@ window.GUIDE_DATA = {
     { id: 'harbor-immutable', title: 'Harbor Docs — Create Tag Immutability Rules', url: 'https://goharbor.io/docs/main/working-with-projects/working-with-images/create-tag-immutability-rules/', use: 'Tag immutability' },
     { id: 'harbor-replication', title: 'Harbor Docs — Creating a Replication Rule', url: 'https://goharbor.io/docs/main/administration/configuring-replication/create-replication-rules/', use: 'Push·Pull-based replication' },
     { id: 'harbor-gc', title: 'Harbor Docs — Garbage Collection', url: 'https://goharbor.io/docs/main/administration/garbage-collection/', use: 'GC' },
+    { id: 'aws-cd', title: 'AWS — What is Continuous Delivery?', url: 'https://aws.amazon.com/devops/continuous-delivery/', use: 'Continuous Delivery vs Deployment(수동 승인 유무)' },
+    { id: 'argocd-bp', title: 'Argo CD Docs — Best Practices', url: 'https://argo-cd.readthedocs.io/en/stable/user-guide/best_practices/', use: 'Config repo와 Source repo 분리' },
+    { id: 'jenkins-gitea', title: 'Jenkins Plugins — Gitea plugin', url: 'https://plugins.jenkins.io/gitea/', use: 'Gitea 서버 연동·Webhook 관리' },
     { id: 'harbor-projconf', title: 'Harbor Docs — Project Configuration', url: 'https://goharbor.io/docs/main/working-with-projects/project-configuration/', use: '자동 스캔·취약 이미지 차단' }
   ],
 
@@ -93,11 +96,11 @@ window.GUIDE_DATA = {
           ex: { v: 'git push origin main', lang: 'bash', code: '$ git push origin main\nTo https://gitea.school.local/school/shop-web.git\n   8b1d0e4..3f9a2c1  main -> main' }
         },
         {
-          id: 'trigger', label: 'Trigger', en: 'on: push / Webhook', src: ['gh-workflow', 'gitea-webhooks'],
+          id: 'trigger', label: 'Trigger', en: 'on: push / Webhook', src: ['gh-workflow', 'gitea-webhooks', 'jenkins-gitea'],
           key: '"push가 오면 실행" 같은 조건. 조건에 맞는 이벤트가 생기면 파이프라인을 시작시킨다.',
           role: 'Git 저장소의 push·PR 이벤트를 받아서 CI 서버에게 실행 시작으로 넘긴다',
           desc: 'push·pull request 같은 이벤트가 생기면 파이프라인 실행을 시작시키는 조건입니다.',
-          ex: { v: 'branches: [main]', lang: 'yaml', code: 'on:\n  push:\n    branches: [main]   # main에 push될 때\n  pull_request:        # PR이 열리거나 갱신될 때\n# Jenkins는 Gitea가 보내는 Webhook을 받아 시작' }
+          ex: { v: 'branches: [main]', lang: 'yaml', code: 'on:\n  push:\n    branches: [main]   # main에 push될 때\n  pull_request:        # PR이 열리거나 갱신될 때\n# Jenkins는 Gitea가 보내는 Webhook을 받아 시작 (Gitea plugin + Multibranch/Organization Folder)' }
         }
       ]
     },
@@ -133,8 +136,8 @@ window.GUIDE_DATA = {
               id: 'secrets', label: 'Secrets', en: 'secrets context', src: ['gitea-secrets'],
               key: '비밀번호·토큰을 저장소 설정에 숨겨 두고 ${{ secrets.이름 }}으로 꺼내 쓴다.',
               role: '저장소 설정의 비밀 값을 받아서 Step의 환경 변수로 넘긴다',
-              desc: '비밀번호·토큰을 저장소(또는 조직) 설정에 저장해 두고 워크플로에서 ${{ secrets.이름 }}으로 꺼내 씁니다.',
-              ex: { v: 'secrets.REGISTRY_PASSWORD', lang: 'yaml', code: '# 저장소 Settings → Actions → Secrets 에 REGISTRY_PASSWORD 등록\n- run: |\n    echo "${{ secrets.REGISTRY_PASSWORD }}" | \\\n      docker login harbor.school.local -u \'robot$shop+ci\' --password-stdin\n# 같은 이름이면 더 좁은 범위(저장소)의 값이 우선' }
+              desc: '비밀번호·토큰을 사용자·조직·저장소 설정에 저장해 두고 워크플로에서 ${{ secrets.이름 }}으로 꺼내 씁니다.',
+              ex: { v: 'secrets.REGISTRY_PASSWORD', lang: 'yaml', code: '# 저장소 Settings → Actions → Secrets 에 REGISTRY_PASSWORD 등록\n- run: |\n    echo "${{ secrets.REGISTRY_PASSWORD }}" | \\\n      docker login harbor.school.local -u \'robot$shop+ci\' --password-stdin\n# 범위: 사용자·조직·저장소. 같은 이름이면 가장 낮은 범위(저장소)의 값이 우선\n# 이름: 영문·숫자·_ 만, 숫자로 시작 불가, GITHUB_·GITEA_ 접두사 불가, 대소문자 구분 안 함' }
             },
             {
               id: 'jenkinsfile', label: 'Jenkinsfile', en: 'Declarative Pipeline', src: ['jenkins-syntax', 'jenkins-pipeline'],
@@ -289,7 +292,7 @@ window.GUIDE_DATA = {
               key: '이미지를 지워도 공간은 바로 비지 않는다. GC가 어디에서도 참조하지 않는 데이터(blob)를 지워 공간을 확보한다.',
               role: '삭제·정리 결과를 받아서 참조 없는 blob을 지우고 확보한 공간을 넘긴다',
               desc: '이미지를 지워도 공간은 바로 비지 않으며, GC가 어떤 manifest도 참조하지 않는 blob을 지워 공간을 확보합니다.',
-              ex: { v: 'GC', lang: 'text', code: '# Administration → Clean Up → Garbage Collection\nDRY RUN  → 지울 수 있는 blob과 예상 확보 용량만 출력\nGC Now   → 참조 없는 blob 실제 삭제\n# 최근 2시간 안에 올라온 blob은 업로드 보호를 위해 제외' }
+              ex: { v: 'GC', lang: 'text', code: '# Administration → Clean Up → Garbage Collection\nDRY RUN  → 지울 수 있는 blob과 예상 확보 용량만 출력\nGC Now   → 참조 없는 blob 실제 삭제\n# 최근 2시간 안에 올라온 blob은 업로드 보호를 위해 제외\n# GC 중에도 push·pull·삭제 가능 (읽기 전용 전환 없음)' }
             }
           ]
         },
@@ -348,18 +351,18 @@ window.GUIDE_DATA = {
             },
             {
               id: 'rbfail', label: '--rollback-on-failure', en: 'Helm 3: --atomic', src: ['helm-upgrade'],
-              key: '업그레이드가 실패하면 직전 성공 Revision으로 자동으로 되돌리는 옵션(Helm 3에서는 --atomic). 켜면 --wait도 함께 적용된다.',
+              key: '업그레이드가 실패하면 직전 성공 Revision으로 자동으로 되돌리는 Helm 4 옵션(Helm 3에서는 --atomic). 켜면 --wait가 watcher로 기본 적용된다.',
               role: '업그레이드 결과를 받아서 실패하면 직전 Revision으로 되돌려 넘긴다',
-              desc: '업그레이드가 실패하면 직전 성공 Revision으로 자동으로 되돌리는 옵션으로, 켜면 --wait도 함께 적용됩니다(Helm 3의 --atomic).',
-              ex: { v: '--rollback-on-failure', lang: 'bash', code: '$ helm upgrade shop-web chart/ -n shop --set image.tag=bad1234 \\\n    --rollback-on-failure\n# 새 리소스가 준비되지 못하면 직전 성공 Revision으로 자동 복구' }
+              desc: '업그레이드가 실패하면 직전 성공 Revision으로 자동으로 되돌리는 Helm 4 옵션으로, 켜면 --wait가 watcher 전략으로 기본 적용됩니다(Helm 3의 --atomic). --wait 를 생략할 때의 기본값은 hookOnly 라서 리소스 준비를 기다리지 않습니다.',
+              ex: { v: '--rollback-on-failure', lang: 'bash', code: '$ helm upgrade shop-web chart/ -n shop --set image.tag=bad1234 \\\n    --rollback-on-failure\n# 새 리소스가 --timeout 안에 준비되지 못하면 직전 성공 Revision으로 자동 복구\n# Helm 3: --atomic (같은 역할)' }
             }
           ]
         },
         {
-          id: 'manifest', label: 'Manifest repo', en: 'Config repo', src: ['argocd'],
+          id: 'manifest', label: 'Manifest repo', en: 'Config repo', src: ['argocd', 'argocd-bp'],
           key: '배포할 YAML·values만 모아 둔 별도 Git 저장소. "지금 클러스터가 이래야 한다"는 기준이 된다.',
           role: 'CI에게서 새 이미지 Tag 변경을 받아서 Argo CD에게 원하는 배포 상태로 넘긴다',
-          desc: '배포할 YAML·values만 모아 둔 별도 Git 저장소로, 원하는 배포 상태의 기준이 됩니다.',
+          desc: '배포할 YAML·values만 모아 둔 별도 Git 저장소로, 원하는 배포 상태의 기준이 됩니다. Argo CD는 코드와 설정 분리, 깔끔한 감사 이력, 권한 분리, 빌드·커밋 무한 루프 방지를 이유로 App repo와 분리하기를 권장합니다.',
           ex: { v: 'school/shop-deploy', lang: 'bash', code: 'shop-deploy/\n└─ apps/shop-web/\n   ├─ Chart.yaml\n   └─ values-prod.yaml      # image.tag: 3f9a2c1\n# CI는 이미지 Tag만 바꿔 커밋\n$ git commit -am "deploy: shop-web 3f9a2c1" && git push' }
         },
         {
@@ -576,7 +579,7 @@ window.GUIDE_DATA = {
 
   terms: [
     { term: 'CI', summary: '코드 변경을 자주 합치고 그때마다 자동 빌드·테스트하는 방식', vs: { term: 'CD', diff: 'CI는 변경을 검증해 결과물을 만드는 데까지, CD는 그 결과물을 환경에 배포하는 데까지' }, src: ['gh-ci', 'gh-cd'], nodes: ['source'], level: 1 },
-    { term: 'Continuous Delivery', summary: '언제든 배포 가능한 상태를 유지하고, 운영 배포는 사람이 승인', vs: { term: 'Continuous Deployment', diff: 'Delivery는 운영 반영 전 사람의 승인이 있고, Deployment는 테스트 통과 시 자동으로 운영까지 반영' }, src: ['gh-cd'], nodes: ['deploy'] },
+    { term: 'Continuous Delivery', summary: '언제든 배포 가능한 상태를 유지하고, 운영 배포는 사람이 승인', vs: { term: 'Continuous Deployment', diff: 'Delivery는 운영 반영 전 사람의 수동 승인이 있고, Deployment는 명시적 승인 없이 자동으로 운영까지 반영' }, src: ['aws-cd', 'gh-cd'], nodes: ['deploy'] },
     { term: 'Pipeline', summary: '빌드·테스트·배포 단계를 순서대로 엮은 자동화 흐름', vs: { term: 'Job', diff: 'Pipeline은 전체 흐름이고, Job은 그 안에서 하나의 Runner가 실행하는 작업 단위' }, src: ['jenkins-pipeline', 'gh-workflow'], nodes: ['workflow', 'jenkinsfile'] },
     { term: 'Job', summary: '같은 Runner에서 실행되는 Step들의 묶음', vs: { term: 'Step', diff: 'Job은 Runner 단위 작업이고, Step은 Job 안에서 차례로 실행되는 명령 하나' }, src: ['gh-workflow'], nodes: ['jobstep'] },
     { term: 'Trigger', summary: 'push·PR·일정 등 파이프라인을 시작시키는 이벤트 조건', vs: { term: 'Webhook', diff: 'Trigger는 언제 실행할지에 대한 조건이고, Webhook은 이벤트를 HTTP로 알려 주는 전달 수단' }, src: ['gh-workflow', 'gitea-webhooks'], nodes: ['trigger'] },
@@ -593,7 +596,7 @@ window.GUIDE_DATA = {
     { term: 'Sync', summary: 'Git의 원하는 상태를 클러스터에 반영하는 Argo CD 동작', vs: { term: 'Refresh', diff: 'Refresh는 Git과 클러스터를 비교만 하고, Sync는 차이를 실제로 적용' }, src: ['argocd-concepts'], nodes: ['syncstatus'] },
     { term: 'OutOfSync', summary: '클러스터 실제 상태가 Git과 다른 상태', vs: { term: 'Degraded', diff: 'OutOfSync는 Git과 다르다는 동기화 상태이고, Degraded는 리소스가 정상 동작하지 않는 Health 상태' }, src: ['argocd-concepts'], nodes: ['syncstatus'] },
     { term: 'Self heal', summary: '누군가 클러스터를 직접 바꿔도 Git 상태로 자동 복구', vs: { term: 'Auto sync', diff: 'Auto sync는 Git이 바뀔 때 자동 반영하고, Self heal은 클러스터 쪽 변경(Drift)까지 되돌림' }, src: ['argocd-sync'], nodes: ['autosync'] },
-    { term: 'Manifest repo', summary: '배포용 YAML·values만 모은 별도 Git 저장소', vs: { term: 'App repo', diff: 'App repo는 소스 코드 변경 이력을, Manifest repo는 배포 상태 변경 이력을 담음' }, src: ['argocd'], nodes: ['manifest'] },
+    { term: 'Manifest repo', summary: '배포용 YAML·values만 모은 별도 Git 저장소', vs: { term: 'App repo', diff: 'App repo는 소스 코드 변경 이력을, Manifest repo는 배포 상태 변경 이력을 담음' }, src: ['argocd', 'argocd-bp'], nodes: ['manifest'] },
     { term: 'Rolling update', summary: 'Pod를 순차적으로 새 버전으로 바꾸는 무중단 배포', vs: { term: 'Recreate', diff: 'Recreate는 기존 Pod를 모두 지운 뒤 새로 만들어 중단이 생기고, Rolling update는 섞어 가며 교체' }, src: ['rolling'], nodes: ['rollout'] },
     { term: 'Vulnerability scan', summary: '이미지 속 패키지의 알려진 취약점(CVE) 검사', vs: { term: 'Unit test', diff: 'Unit test는 코드가 기능적으로 맞는지, 취약점 스캔은 포함된 패키지가 안전한지를 확인' }, src: ['harbor-scan'], nodes: ['scan'] },
     { term: 'Stage', summary: 'Jenkins 파이프라인 화면에 보이는 큰 작업 단계', vs: { term: 'Step', diff: 'Stage는 Test·Build 같은 단계 묶음이고, Step은 그 안의 sh 같은 실행 명령 하나' }, src: ['jenkins-syntax'], nodes: ['jstage'] },
