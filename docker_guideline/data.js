@@ -10,7 +10,7 @@ window.GUIDE_DATA = {
     eyebrow: '컨테이너 기초',
     title: 'Docker 한눈에 보기',
     subtitle: 'Dockerfile로 이미지를 만들고, Registry로 나누고, Container로 실행하는 흐름을 한 단계씩 살펴봅니다.',
-    checked: '2026-11-09',
+    checked: '2026-11-17',
     keyPoint: '프로그램과 실행 환경을 한 상자에 담아, Docker가 있는 곳이면 어디서든 똑같이 실행하는 도구',
     learn: ['상자(Image)를 만들고 → 보관하고 → 실행(Container)하는 5단계 기본 흐름', '각 구성요소가 무엇이고, 누구에게 받아서 누구에게 넘기는지', '필요할 때만 한 단계씩 더 깊이: 네트워크·저장소·격리 같은 세부 기능']
   },
@@ -96,7 +96,7 @@ window.GUIDE_DATA = {
           id: 'df-cmd', label: 'CMD · ENTRYPOINT', en: 'start command', src: ['dockerfile'],
           key: '컨테이너가 시작될 때 실행할 명령을 정한다. 이미지에 "켜면 무엇을 할지"를 적어 둔다.',
           role: 'Dockerfile에게서 받아 이미지 설정에 저장했다가, docker run 때 Container에게 시작 명령으로 넘긴다',
-          desc: 'ENTRYPOINT는 고정 실행 파일, CMD는 docker run 인자로 바뀌는 기본 인자입니다.'
+          desc: 'ENTRYPOINT는 고정 실행 파일(docker run --entrypoint 로만 교체), CMD는 docker run 인자로 바뀌는 기본 인자입니다.'
         },
         {
           id: 'df-health', label: 'HEALTHCHECK', en: 'health check', src: ['dockerfile'],
@@ -298,7 +298,7 @@ window.GUIDE_DATA = {
           id: 'restart', label: 'Restart policy', en: 'Restart policy', src: ['restart'],
           key: '컨테이너가 종료됐을 때 자동으로 다시 켤지(no, on-failure, always 등) 정하는 규칙.',
           role: 'Container가 종료됐다는 사실을 받아서 Docker Daemon에게 다시 시작할지 넘긴다',
-          desc: '컨테이너가 종료됐을 때 자동으로 다시 시작할지(no, on-failure, always 등) 정하는 설정입니다.'
+          desc: '컨테이너가 종료됐을 때 자동으로 다시 시작할지(no, on-failure, always, unless-stopped) 정하는 설정입니다. 기본값은 no이고, 컨테이너가 10초 이상 실행돼 정상 시작된 뒤부터 적용됩니다.'
         },
         {
           id: 'logs', label: 'logs · exec', en: 'debugging', src: ['logs', 'exec'],
@@ -318,8 +318,8 @@ window.GUIDE_DATA = {
     "df-copy": {"v":"COPY . .","lang":"dockerfile","code":"COPY package*.json ./   # 의존성 목록 먼저 → 소스만 바뀌면 다음 RUN 은 캐시 사용\nRUN npm ci\nCOPY . .                # 소스는 나중에 (.dockerignore 로 node_modules·.git 제외)"},
     "df-run": {"v":"RUN npm ci","lang":"dockerfile","code":"RUN npm ci\n\n# 여러 명령을 한 RUN 으로 묶어 레이어 하나로\nRUN apt-get update \\\n && apt-get install -y --no-install-recommends curl \\\n && rm -rf /var/lib/apt/lists/*"},
     "multistage": {"v":"COPY --from=build","lang":"dockerfile","code":"FROM node:22-slim AS build\nRUN npm run build\n\nFROM node:22-slim                    # 최종 이미지는 새로 시작\nCOPY --from=build /app/dist ./dist   # 빌드 결과물만 복사\n# → 컴파일러·소스·devDependencies 는 최종 이미지에 남지 않음"},
-    "df-health": {"v":"HEALTHCHECK","lang":"text","code":"HEALTHCHECK --interval=30s --timeout=3s --retries=3 \\\n  CMD node -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"\n\n$ docker ps\nSTATUS: Up 2 minutes (healthy)"},
-    "df-cmd": {"v":"CMD [\"dist/server.js\"]","lang":"text","code":"ENTRYPOINT [\"node\"]\nCMD [\"dist/server.js\"]\n\n$ docker run myapp:1.0            # → node dist/server.js\n$ docker run myapp:1.0 other.js   # → node other.js  (CMD 만 교체됨)"},
+    "df-health": {"v":"HEALTHCHECK","lang":"text","code":"HEALTHCHECK --interval=30s --timeout=3s --retries=3 \\\n  CMD node -e \"fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\"\n\n$ docker ps\nSTATUS: Up 2 minutes (healthy)\n\n# 기본값: --interval=30s --timeout=30s --start-period=0s --start-interval=5s --retries=3\n# HEALTHCHECK 는 Dockerfile 에 하나만 유효 (여러 개면 마지막 것만 적용)"},
+    "df-cmd": {"v":"CMD [\"dist/server.js\"]","lang":"text","code":"ENTRYPOINT [\"node\"]\nCMD [\"dist/server.js\"]\n\n$ docker run myapp:1.0            # → node dist/server.js\n$ docker run myapp:1.0 other.js   # → node other.js  (CMD 만 교체됨)\n$ docker run --entrypoint sh myapp:1.0   # ENTRYPOINT 교체"},
     "compose": {"v":"docker compose up","lang":"yaml","code":"services:\n  web:\n    image: nginx:1.27\n    ports: [\"8080:80\"]\n    depends_on: [db]\n  db:\n    image: postgres:17\n    environment:\n      POSTGRES_PASSWORD: example\n    volumes: [dbdata:/var/lib/postgresql/data]\nvolumes:\n  dbdata:\n\n$ docker compose up -d"},
     "daemon": {"v":"dockerd","lang":"bash","code":"docker build -t myapp:1.0 .   # BuildKit 이 빌드\ndocker image ls               # Image\ndocker container ls           # Container\ndocker network ls             # Network\ndocker volume ls              # Volume\n# 실행은 dockerd → containerd → runc 로 위임"},
     "buildkit": {"v":"docker build","lang":"text","code":"$ docker build -t myapp:1.0 .\n[+] Building 12.3s (12/12) FINISHED\n => [build 3/6] COPY package*.json ./\n => CACHED [build 4/6] RUN npm ci      ← 바뀌지 않은 단계는 캐시\n => [build 5/6] COPY . .\n => [build 6/6] RUN npm run build\n(출력은 요약한 예)"},
@@ -332,7 +332,7 @@ window.GUIDE_DATA = {
     "containers": {"v":"Container","lang":"bash","code":"docker run -d --name web --memory 512m --cpus 1.5 --restart unless-stopped nginx:1.27\n#   새 프로세스는 자기만의 PID·network namespace 를 봄\n#   --memory·--cpus → cgroups 로 자원 제한\n#   --restart       → 종료 시 재시작 정책\ndocker logs -f web\ndocker exec -it web sh"},
     "namespaces": {"v":"namespace","lang":"text","code":"$ docker run --rm alpine ps\nPID   USER     TIME  COMMAND\n    1 root      0:00 ps      ← 컨테이너 안에서는 자기가 PID 1 (PID namespace)\n\n$ docker run --rm --pid=host alpine ps   # 호스트 PID namespace 공유 → 호스트 프로세스가 모두 보임"},
     "cgroups": {"v":"--memory 512m","lang":"text","code":"$ docker run -d --name web --memory 512m --cpus 1.5 nginx:1.27\n$ docker stats --no-stream web\nNAME   CPU %   MEM USAGE / LIMIT\nweb    0.00%   8MiB / 512MiB\n# 메모리 한도 초과 → OOM kill, CPU 한도 초과 → 스로틀링"},
-    "restart": {"v":"--restart unless-stopped","lang":"bash","code":"docker run -d --restart unless-stopped nginx:1.27\n# no              재시작 안 함 (기본값)\n# on-failure[:3]  비정상 종료(코드≠0)일 때만, 최대 3회\n# always          항상 재시작 (직접 stop 하면 데몬 재시작 때 다시 시작)\n# unless-stopped  always 와 같지만 직접 stop 한 컨테이너는 제외"},
+    "restart": {"v":"--restart unless-stopped","lang":"bash","code":"docker run -d --restart unless-stopped nginx:1.27\n# no              재시작 안 함 (기본값)\n# on-failure[:3]  비정상 종료(코드≠0)일 때만, 최대 3회\n# always          항상 재시작 (직접 stop 하면 데몬 재시작 때 다시 시작)\n# unless-stopped  always 와 같지만 멈춘 컨테이너는 데몬이 재시작돼도 다시 켜지 않음\n# 정책은 컨테이너가 10초 이상 실행된 뒤부터 적용 (시작 직후 실패 반복 방지)\n# 직접 stop 하면 데몬 재시작·수동 시작 전까지 정책 무시 / Swarm 서비스는 별도 옵션 사용"},
     "logs": {"v":"docker logs","lang":"bash","code":"docker logs -f --tail 100 web    # stdout·stderr 를 따라가며 보기\ndocker exec -it web sh           # 실행 중 컨테이너 안에서 셸 열기\ndocker exec web env              # 컨테이너 환경 변수 확인"},
     "networks": {"v":"Network","lang":"bash","code":"docker network create appnet   # 사용자 정의 bridge\ndocker run -d --name db  --network appnet -e POSTGRES_PASSWORD=example postgres:17\ndocker run -d --name web --network appnet -p 8080:80 nginx:1.27\n# web 안에서 db 라는 이름으로 접속 (내장 DNS 127.0.0.11)\ndocker run -d --network host nginx:1.27\ndocker run --rm --network none alpine ip addr\n# overlay: 여러 Docker 호스트(Swarm)에 걸친 네트워크"},
     "bridge": {"v":"bridge","lang":"bash","code":"docker network create appnet\ndocker run -d --name api --network appnet myapp:1.0\ndocker run --rm --network appnet alpine wget -qO- http://api:3000/health\n# 같은 사용자 정의 bridge 안에서는 컨테이너 이름으로 통신"},
@@ -499,10 +499,10 @@ window.GUIDE_DATA = {
     { term: 'dockerd', summary: 'Docker API를 제공하고 객체를 관리하는 Daemon', vs: { term: 'containerd', diff: 'dockerd는 빌드·네트워크 등 Docker 기능 전체를, containerd는 이미지·컨테이너 실행 관리를 담당' }, src: ['dockerd', 'containerd'], nodes: ['daemon'] },
     { term: 'containerd', summary: '컨테이너 생명주기를 관리하는 런타임', vs: { term: 'runc', diff: 'containerd는 컨테이너를 관리하고, runc는 커널을 호출해 프로세스를 실제로 생성' }, src: ['containerd', 'runc'], nodes: ['containerd'] },
     { term: 'Namespace', summary: '프로세스가 볼 수 있는 시스템 자원을 분리하는 커널 기능', vs: { term: 'cgroup', diff: 'Namespace는 무엇을 볼 수 있는지 격리하고, cgroup은 얼마나 쓸 수 있는지 제한' }, src: ['ns', 'cgroup'], nodes: ['namespaces'] },
-    { term: 'CMD', summary: '컨테이너 시작 시 실행할 기본 명령·인자', vs: { term: 'ENTRYPOINT', diff: 'CMD는 docker run 인자로 쉽게 바뀌고, ENTRYPOINT는 항상 실행되는 고정 명령' }, src: ['dockerfile'], nodes: ['df-cmd'] },
+    { term: 'CMD', summary: '컨테이너 시작 시 실행할 기본 명령·인자', vs: { term: 'ENTRYPOINT', diff: 'CMD는 docker run 인자로 쉽게 바뀌고, ENTRYPOINT는 항상 실행되는 고정 명령(docker run --entrypoint 로만 교체)' }, src: ['dockerfile'], nodes: ['df-cmd'] },
     { term: 'ARG', summary: '빌드할 때만 쓰는 변수', vs: { term: 'ENV', diff: 'ARG는 빌드 중에만 존재하고, ENV는 완성된 이미지와 실행 중인 컨테이너에도 남음' }, src: ['dockerfile'], nodes: ['dockerfile'], level: 3 },
-    { term: 'COPY', summary: 'Build context의 파일을 이미지로 복사하는 명령', vs: { term: 'ADD', diff: 'COPY는 단순 복사만 하고, ADD는 원격 URL·tar 자동 압축 해제까지 수행' }, src: ['dockerfile'], nodes: ['df-copy'] },
-    { term: 'EXPOSE', summary: '컨테이너가 사용하는 포트를 문서처럼 표시하는 명령', vs: { term: '포트 공개(-p)', diff: 'EXPOSE는 표시일 뿐이고, -p를 써야 실제로 호스트에서 접속 가능' }, src: ['dockerfile', 'ports'], nodes: ['ports'] },
+    { term: 'COPY', summary: 'Build context의 파일을 이미지로 복사하는 명령', vs: { term: 'ADD', diff: 'COPY는 Build context·단계에서 복사만 하고, ADD는 원격 URL·Git 저장소도 받으며 로컬 tar는 자동으로 풀어 줌(원격 tar는 기본적으로 풀지 않음)' }, src: ['dockerfile'], nodes: ['df-copy'] },
+    { term: 'EXPOSE', summary: '컨테이너가 사용하는 포트를 문서처럼 표시하는 명령', vs: { term: '포트 공개(-p)', diff: 'EXPOSE는 표시일 뿐이고, -p(지정 포트) 또는 -P(EXPOSE한 포트 전부를 높은 번호 포트로)를 써야 실제로 호스트에서 접속 가능' }, src: ['dockerfile', 'ports'], nodes: ['ports'] },
     { term: 'Build context', summary: 'docker build에 함께 전달되는 파일 묶음(보통 . 디렉터리)', vs: { term: 'Dockerfile', diff: 'Build context는 빌드에 보내는 파일 묶음이고, Dockerfile은 그 파일로 이미지를 만드는 순서' }, src: ['context'], nodes: ['df-copy'] },
     { term: 'Multi-stage build', summary: '여러 FROM 단계로 빌드하고 결과물만 최종 이미지에 복사하는 방식', vs: { term: '단일 단계 빌드', diff: '단일 단계는 빌드 도구까지 이미지에 남고, Multi-stage는 실행에 필요한 것만 남겨 작음' }, src: ['multistage'], nodes: ['multistage'] },
     { term: 'BuildKit', summary: 'Docker의 기본 이미지 빌드 엔진', vs: { term: 'Docker Daemon', diff: 'BuildKit은 빌드만 담당하고, Daemon은 실행·네트워크·저장소까지 관리' }, src: ['buildkit'], nodes: ['buildkit'] },
