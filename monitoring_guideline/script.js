@@ -2030,6 +2030,7 @@
       if (raf) cancelAnimationFrame(raf);
       raf = requestAnimationFrame(function () { raf = 0; sizeBoard(); hideTip(); });
     });
+    $('stage').addEventListener('scroll', hideTip, { passive: true });
     window.addEventListener('hashchange', function () {
       var h = decodeURIComponent((location.hash || '').slice(1));
       if (h !== (state.viewId || '')) setView(state.nodes[h] ? h : null);

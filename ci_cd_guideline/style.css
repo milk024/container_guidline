@@ -128,12 +128,14 @@ html.is-leaving .board-wrap { transform: scale(.94); filter: blur(3px); transiti
 
 @media (min-width: 900px) {
   .layout { height: calc(100vh - 64px); padding-right: calc(var(--tw) + var(--gut) * 2); }
-  .hw-stage { height: 100%; justify-content: center; justify-content: safe center; }
+  /* 화면이 낮아 장면·목록이 칸보다 길면 페이지 대신 장면 칸 안에서 스크롤한다.
+     그래야 아래 줄에 고정된 실습 창이 내용을 덮지 않는다 */
+  .hw-stage { height: 100%; justify-content: center; justify-content: safe center; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
   /* 실습 창은 장면을 가리지 않게 제 자리를 따로 갖는다.
      넓은 화면: 펼치면 왼쪽 칸 / 좁은 데스크톱: 펼치면 아래 칸 / 접으면 어느 쪽이든 아래 줄 */
   html.pr-on .practice { left: var(--gut); bottom: var(--gut); }
   html.pr-on.pr-folded .practice { width: min(420px, calc(100vw - var(--gut) * 2)); }
-  html.pr-on.pr-folded .layout { padding-bottom: 72px; }
+  html.pr-on.pr-folded .layout { padding-bottom: calc(62px + var(--gut) * 2); }  /* 접힌 실습 창 높이 + 위아래 여백 */
   html.pr-on:not(.pr-folded) .practice { display: flex; flex-direction: column; }
   html.pr-on:not(.pr-folded) .pr-body { flex: 1; min-height: 0; max-height: none; }
 }
